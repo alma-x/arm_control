@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 from PyQt5 import uic, QtWidgets,QtGui
 import rospy
 from std_msgs.msg import String
-from ur3_control.srv import UserInterface,UserInterfaceRequest,aruco_service,aruco_serviceRequest
+from arm_control.srv import UserInterface,UserInterfaceRequest,aruco_service,aruco_serviceRequest
 from geometry_msgs.msg import Pose
 from tf import transformations
 import rospkg

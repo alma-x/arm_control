@@ -2,10 +2,10 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 #include "ros/service.h"
-#include "ur3_control/aruco_service.h"
-#include "ur3_control/UserInterface.h"
-#include "ur3_control/collision_object_srv.h"
-#include "ur3_control/float_return_srv.h"
+#include "arm_control/aruco_service.h"
+#include "arm_control/UserInterface.h"
+#include "arm_control/collision_object_srv.h"
+#include "arm_control/float_return_srv.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <iostream>
@@ -178,10 +178,10 @@ void ruota_e_cerca_aruco();
 void ruota_360();
 void automatizzato();
 double rad_to_grad(double rad);
-bool callback_service_aruco_found(ur3_control::aruco_service::Request &req,ur3_control::aruco_service::Response &res);
+bool callback_service_aruco_found(arm_control::aruco_service::Request &req,arm_control::aruco_service::Response &res);
 bool individua_aruco(Pose *aruco_pose);
 bool move_to_aruco();
-ur3_control::aruco_serviceResponse bridge_service(string modalita,string second_information);
+arm_control::aruco_serviceResponse bridge_service(string modalita,string second_information);
 bool function_pose_aruco();
 Pose homo_to_pose(Affine3d homo);
 bool move_aruco_to_center_of_camera(double percentual_zoom);
@@ -554,7 +554,7 @@ void aruco_pannello(){
 }
 bool individua_aruco(Pose *aruco_pose_solidale){
 ////
-//  ur3_control::aruco_serviceResponse aruco_srv_msg_resp=bridge_service(str_md_rd,"");
+//  arm_control::aruco_serviceResponse aruco_srv_msg_resp=bridge_service(str_md_rd,"");
 //  ROS_INFO("Aruco found:%s",(aruco_srv_msg_resp.aruco_found ? "YES":"NO"));
 
 //  if(aruco_srv_msg_resp.aruco_found){
@@ -573,23 +573,23 @@ return false;
 
 
 //Service
-ur3_control::aruco_serviceResponse bridge_service(string modalita,string second_information){
+arm_control::aruco_serviceResponse bridge_service(string modalita,string second_information){
 
     ros::NodeHandle node_handle;
     ros::ServiceClient client1;
-    client1 = node_handle.serviceClient<ur3_control::aruco_service>("/aruco_modality");
-    ur3_control::aruco_service aruco_srv_msg;
+    client1 = node_handle.serviceClient<arm_control::aruco_service>("/aruco_modality");
+    arm_control::aruco_service aruco_srv_msg;
 
     aruco_srv_msg.request.modality=modalita;
     aruco_srv_msg.request.second_information=second_information;
     client1.call(aruco_srv_msg);
     return aruco_srv_msg.response;
 }
-ur3_control::collision_object_srvResponse collision_service(ur3_control::collision_object_srvRequest coll_req){
+arm_control::collision_object_srvResponse collision_service(arm_control::collision_object_srvRequest coll_req){
   ros::NodeHandle node_handle;
   ros::ServiceClient client1;
-  ur3_control::collision_object_srv msg;
-  client1 = node_handle.serviceClient<ur3_control::collision_object_srv>("/collision_server");
+  arm_control::collision_object_srv msg;
+  client1 = node_handle.serviceClient<arm_control::collision_object_srv>("/collision_server");
 
   msg.request=coll_req;
   client1.call(msg);
@@ -601,7 +601,7 @@ ur3_control::collision_object_srvResponse collision_service(ur3_control::collisi
 
 bool cambia_aruco(string ID){
   for(int j=0;j<10;j++){
-    ur3_control::aruco_serviceResponse msg=bridge_service(str_md_next_aruco,ID);
+    arm_control::aruco_serviceResponse msg=bridge_service(str_md_next_aruco,ID);
     if(std::to_string(msg.id_aruco)==ID){
       return true;
     }
@@ -623,7 +623,7 @@ bool aruco_individuato(){
 
 }
 bool aggiorna_aruco_selezionato(int ID){
-  ur3_control::aruco_serviceResponse msg;
+  arm_control::aruco_serviceResponse msg;
   msg=bridge_service(str_md_rd,"");
 
 
@@ -1108,7 +1108,7 @@ bool se_aruco_individuato_aggiorna_array(int ID){
 
   //se chiamata con ID==0 controllerà tutti gli ID e se ne avrà trovato almeno uno restituirà true
 
-  ur3_control::aruco_serviceResponse msg;
+  arm_control::aruco_serviceResponse msg;
   msg=bridge_service(str_md_rd,"");
 
 
@@ -1380,7 +1380,7 @@ void signal_callback_handler(int signum) {
 }
 void exit_from_all(){
 
-  ur3_control::collision_object_srvRequest coll_req;
+  arm_control::collision_object_srvRequest coll_req;
   coll_req.exit=true;
   coll_req.add=false;
 
@@ -1397,7 +1397,7 @@ bool add_box(Collision_box_type box){
     return false;
   }
 
-  ur3_control::collision_object_srvRequest coll_srv;
+  arm_control::collision_object_srvRequest coll_srv;
   coll_srv.add=true;
   coll_srv.exit=false;
   coll_srv.box_name=box.name;
@@ -1412,7 +1412,7 @@ bool add_box(Collision_box_type box){
 }
 bool remove_box(string box_name){
   ROS_INFO("REMOVING BOX");
-  ur3_control::collision_object_srvRequest coll_srv;
+  arm_control::collision_object_srvRequest coll_srv;
 
   coll_srv.add=false;
   coll_srv.box_name=box_name;
@@ -1426,7 +1426,7 @@ bool attach_box(Collision_box_type box){
     return false;
   }
 
-  ur3_control::collision_object_srvRequest coll_srv;
+  arm_control::collision_object_srvRequest coll_srv;
   coll_srv.add=false;
   coll_srv.exit=false;
   coll_srv.attach=true;
@@ -1446,7 +1446,7 @@ bool detach_box(Collision_box_type box){
     return false;
   }
 
-  ur3_control::collision_object_srvRequest coll_srv;
+  arm_control::collision_object_srvRequest coll_srv;
   coll_srv.add=false;
   coll_srv.exit=false;
   coll_srv.attach=false;
@@ -1472,8 +1472,8 @@ bool remove_and_detach_box(Collision_box_type box){
 void blocca_se_vedi_nuovo_aruco(){
   ros::NodeHandle node_handle;
   ros::ServiceClient client1;
-  client1 = node_handle.serviceClient<ur3_control::aruco_service>("/aruco_modality");
-  ur3_control::aruco_service aruco_srv_msg;
+  client1 = node_handle.serviceClient<arm_control::aruco_service>("/aruco_modality");
+  arm_control::aruco_service aruco_srv_msg;
 
   aruco_srv_msg.request.modality="blocca_se_vedi_nuovo_aruco";
   aruco_srv_msg.request.second_information="";
@@ -1488,8 +1488,8 @@ void blocca_se_vedi_nuovo_aruco(){
 void smetti_di_bloccare_se_vedi_nuovo_aruco(){
   ros::NodeHandle node_handle;
   ros::ServiceClient client1;
-  client1 = node_handle.serviceClient<ur3_control::aruco_service>("/aruco_modality");
-  ur3_control::aruco_service aruco_srv_msg;
+  client1 = node_handle.serviceClient<arm_control::aruco_service>("/aruco_modality");
+  arm_control::aruco_service aruco_srv_msg;
 
   aruco_srv_msg.request.modality="smetti_di_bloccare_se_vedi_nuovo_aruco";
   aruco_srv_msg.request.second_information="";
@@ -1500,7 +1500,7 @@ void smetti_di_bloccare_se_vedi_nuovo_aruco(){
 bool save_aruco_in_txt(){
   ofstream outFile;
   string nome,tipo;
-  string pkgpath = ros::package::getPath("ur3_control");
+  string pkgpath = ros::package::getPath("arm_control");
   string path_txt="/txt/aruco_values.txt";
   string path_total=pkgpath + path_txt;
   if(show_log)
@@ -1601,7 +1601,7 @@ void stampa_aruco_su_excel(){
 
   ifstream inFile;
   string nome,tipo;
-  string pkgpath = ros::package::getPath("ur3_control");
+  string pkgpath = ros::package::getPath("arm_control");
   string path_total_csv=pkgpath +"/../../../"+"aruco_table.csv";
   cout<<"percorso txt: "<<path_total_csv<<endl<<endl;
 
@@ -2319,7 +2319,7 @@ Affine_valid homo_0_aruco_elaration(){
   //elabora la trasformata omogenea da 0 ad aruco
 
 
-  ur3_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
+  arm_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
 
   if(msg_from_bridge.aruco_found){
 
@@ -2387,7 +2387,7 @@ Affine_valid homo_0_aruco_elaration(){
 
 }
 bool move_aruco_to_center_of_camera(double percentual_zoom){
-  ur3_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
+  arm_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
 
   if(msg_from_bridge.aruco_found){
     ROS_INFO("ERC: centering camera");
@@ -2629,8 +2629,8 @@ bool centra_aruco_nella_camera(int ID_aruco, double percentuale_zoom){
   //con servizio python------------------
   //ros::NodeHandle node_handle;
   //ros::ServiceClient client1;
-  //client1 = node_handle.serviceClient<ur3_control::float_return_srv>("/solve_equation_serv");
-  //ur3_control::float_return_srv msg;
+  //client1 = node_handle.serviceClient<arm_control::float_return_srv>("/solve_equation_serv");
+  //arm_control::float_return_srv msg;
   //msg.request.num1=T_tool_aruco.translation().x();
   //msg.request.num2=T_tool_aruco.translation().y();
   //client1.call(msg);
@@ -2779,7 +2779,7 @@ bool centra_aruco_nella_camera(int ID_aruco, double percentuale_zoom){
 }
 */
 bool function_pose_aruco(){
-  ur3_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
+  arm_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
 
   if(msg_from_bridge.aruco_found){
 
@@ -4435,7 +4435,7 @@ bool right_panel(){
 
   int cont=0;
   int aruco_nascosto_trovato=-1;
-  ur3_control::aruco_serviceResponse msg=bridge_service(str_md_rd,"");
+  arm_control::aruco_serviceResponse msg=bridge_service(str_md_rd,"");
   for(int i=0;i<msg.all_aruco_found.size();i++){
     if(msg.all_aruco_found[i]==true){
       cont++;
@@ -4628,7 +4628,7 @@ bool go_and_recognize_id_in_inspection_window(){
 
   int cont=0;
   int aruco_nascosto_trovato=-1;
-  ur3_control::aruco_serviceResponse msg=bridge_service(str_md_rd,"");
+  arm_control::aruco_serviceResponse msg=bridge_service(str_md_rd,"");
   for(int i=0;i<msg.all_aruco_found.size();i++){
     if(msg.all_aruco_found[i]==true){
       cont++;
@@ -4702,7 +4702,7 @@ void load_parameters()
 
     ifstream inFile;
     string nome,tipo;
-    string pkgpath = ros::package::getPath("ur3_control");
+    string pkgpath = ros::package::getPath("arm_control");
     string path_txt="/txt/standard_positions.txt";
     string path_total=pkgpath + path_txt;
     cout<<"percorso txt: "<<path_total<<endl<<endl;
@@ -4940,7 +4940,7 @@ bool load_aruco_values_from_txt(){
 
   ifstream inFile;
   string nome,tipo;
-  string pkgpath = ros::package::getPath("ur3_control");
+  string pkgpath = ros::package::getPath("arm_control");
   string path_txt="/txt/aruco_values.txt";
   string path_total=pkgpath + path_txt;
   cout<<"percorso txt: "<<path_total<<endl<<endl;

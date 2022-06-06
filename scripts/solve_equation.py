@@ -7,7 +7,7 @@ import rospy
 from math import sin,cos,atan,pi
 #from std_msgs.msg import String
 #from moveit_commander.conversions import pose_to_list
-from ur3_control.srv import collision_object_srv,collision_object_srvResponse, collision_object_srvRequest, float_return_srv, float_return_srvResponse
+from arm_control.srv import collision_object_srv,collision_object_srvResponse, collision_object_srvRequest, float_return_srv, float_return_srvResponse
 #import sympy as sym
 
 ## END_SUB_TUTORIAL

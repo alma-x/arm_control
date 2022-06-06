@@ -21,10 +21,10 @@ from moveit_commander.move_group import MoveGroupCommander
 from moveit_commander.robot import RobotCommander
 from std_msgs.msg import String
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-from ur3_control.srv import *  # (collision_object_srv, collision_object_srvRequest,
+from arm_control.srv import *  # (collision_object_srv, collision_object_srvRequest,
 
                             # collision_object_srvResponse,aruco_service,aruco_serviceRequest,aruco_serviceResponse,UserInterface)
-from ur3_control.msg import *
+from arm_control.msg import *
 
 
 

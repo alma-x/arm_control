@@ -2,25 +2,25 @@
 #include "ros/service.h"
 #include "iostream"
 #include "stdio.h"
-#include "ur3_control/aruco_service.h"
-#include "ur3_control/cv_to_bridge.h"
+#include "arm_control/aruco_service.h"
+#include "arm_control/cv_to_bridge.h"
 #include "actionlib_msgs/GoalID.h"
 #include "string.h"
 #include "library.h"
-#include "ur3_control/cv_server.h"
+#include "arm_control/cv_server.h"
 #include "std_msgs/Bool.h"
 using namespace std;
-ur3_control::cv_to_bridge msg_from_cv;
+arm_control::cv_to_bridge msg_from_cv;
 sensor_msgs::JointState msg_from_joints;
 ros::ServiceClient client;
 bool bool_md_bpa=false;
 bool bool_blocca_per_ogni_nuovo_aruco=false;
 bool aruco_trovati[aruco_length_array];
 int ID_DA_BLOCCARE=-1;
-void stampa_cv_msg(const ur3_control::cv_to_bridge msg){
+void stampa_cv_msg(const arm_control::cv_to_bridge msg){
 ROS_INFO("Message received:\n x:%f \n y:%f \n z:%f \n success:%s",msg.x,msg.y,msg.z,(msg.success)? "success":"not success");
 }
-void cv_callback(const ur3_control::cv_to_bridge& msg){
+void cv_callback(const arm_control::cv_to_bridge& msg){
 
   msg_from_cv=msg;
 
@@ -54,7 +54,7 @@ void joint_callback(const sensor_msgs::JointState& msg){
 
   msg_from_joints=msg;
 }
-bool callback_modality(ur3_control::aruco_service::Request &req, ur3_control::aruco_service::Response &res){
+bool callback_modality(arm_control::aruco_service::Request &req, arm_control::aruco_service::Response &res){
 
 
   if(show_log)
@@ -71,7 +71,7 @@ bool callback_modality(ur3_control::aruco_service::Request &req, ur3_control::ar
   }
   if(str_md_next_aruco==req.modality){
 
-      ur3_control::cv_server cv_service_msg;
+      arm_control::cv_server cv_service_msg;
       cv_service_msg.request.next_aruco=true;
       cv_service_msg.request.message="select_next_aruco";
       cv_service_msg.request.second_information=req.second_information;
@@ -83,7 +83,7 @@ bool callback_modality(ur3_control::aruco_service::Request &req, ur3_control::ar
   }
   if("exit"==req.modality){
       bool_exit=true;
-      ur3_control::cv_server cv_service_msg;
+      arm_control::cv_server cv_service_msg;
       cv_service_msg.request.message="exit";
       client.call(cv_service_msg);
   }
@@ -108,7 +108,7 @@ bool callback_modality(ur3_control::aruco_service::Request &req, ur3_control::ar
   }
   if("turn_on_off_camera"==req.modality){
       
-      ur3_control::cv_server cv_service_msg;
+      arm_control::cv_server cv_service_msg;
       cv_service_msg.request.next_aruco=false;
       cv_service_msg.request.message="turn_on_off_camera";
       cv_service_msg.request.second_information="";
@@ -172,7 +172,7 @@ int main(int argc, char** argv){
   sub_but9=n.subscribe("button9",1,button_callback);
 
   serv=n.advertiseService("aruco_modality", callback_modality);
-  client = n.serviceClient<ur3_control::cv_server>("/cv_server");
+  client = n.serviceClient<arm_control::cv_server>("/cv_server");
   MoveGroupInterface move_group(PLANNING_GROUP);
 
   robot=&move_group;

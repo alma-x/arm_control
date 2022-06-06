@@ -17,8 +17,8 @@ void Menu_Di_Scelta_Prove();
 void MenuDiSceltaOpzioni();
 
 bool msg_to_be_processed=false;
-ur3_control::UserInterface::Request msg_from_interface;
-bool callback_modality(ur3_control::UserInterface::Request &req, ur3_control::UserInterface::Response &res){
+arm_control::UserInterface::Request msg_from_interface;
+bool callback_modality(arm_control::UserInterface::Request &req, arm_control::UserInterface::Response &res){
   msg_from_interface=req;
   msg_to_be_processed=true;
   return true;
@@ -73,7 +73,7 @@ void esegui_msg_from_inteface(){
       if(msg_from_interface.modality=="automazione_pannello_Completa"){
       }
       if(msg_from_interface.modality=="automazione_pannello_MoveToSelectedAruco"){
-        ur3_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
+        arm_control::aruco_serviceResponse msg_from_bridge=bridge_service(str_md_rd,"");
 
           if(msg_from_bridge.id_aruco==1 || msg_from_bridge.id_aruco==2 || msg_from_bridge.id_aruco==3 ||
              msg_from_bridge.id_aruco==4 || msg_from_bridge.id_aruco==5 || msg_from_bridge.id_aruco==6 ||

@@ -9,7 +9,7 @@ import moveit_msgs.msg
 import rospy
 from moveit_commander.conversions import pose_to_list
 from std_msgs.msg import String
-from ur3_control.srv import (collision_object_srv, collision_object_srvRequest,
+from arm_control.srv import (collision_object_srv, collision_object_srvRequest,
                              collision_object_srvResponse)
 
 ## END_SUB_TUTORIAL
