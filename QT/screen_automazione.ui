@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>stop_traj_button</class>
+ <widget class="QWidget" name="stop_traj_button">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>700</width>
+    <height>605</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>30</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Screen_Automazione</string>
+  </property>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>540</x>
+     <y>93</y>
+     <width>114</width>
+     <height>83</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QPushButton" name="pushButton">
+      <property name="text">
+       <string>SPEGNI</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_2">
+      <property name="text">
+       <string>Main Menu</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_7">
+      <property name="text">
+       <string>Freno a mano</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>151</x>
+     <y>101</y>
+     <width>317</width>
+     <height>216</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QLabel" name="label">
+      <property name="text">
+       <string>PANNELLO</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_12">
+      <property name="text">
+       <string>Vai alla posizione iniziale</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_8">
+      <property name="text">
+       <string>Ruota e cerca pannello</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_4">
+      <property name="text">
+       <string>Ruota e cerca aruco selezionato tra quelli per terra</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_3">
+      <property name="text">
+       <string>Posizione vista pannello</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="pushButton_5">
+        <property name="text">
+         <string>Muoviti fino all'aruco selezionato</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QPushButton" name="pushButton_6">
+        <property name="text">
+         <string>Select Aruco</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="select_aruco_value">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="l_comunicazione">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>COMMUNICATION LABLE</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>460</x>
+     <y>340</y>
+     <width>189</width>
+     <height>83</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <widget class="QPushButton" name="pushButton_9">
+      <property name="text">
+       <string>CENTRA ARUCO</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_10">
+      <property name="text">
+       <string>CENTRA ARUCO E ZOOM IN</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_11">
+      <property name="text">
+       <string>CENTRA ARUCO E ZOOM OUT</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>440</y>
+     <width>82</width>
+     <height>54</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_4">
+    <item>
+     <widget class="QPushButton" name="pushButton_13">
+      <property name="text">
+       <string>Debug1</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButton_14">
+      <property name="text">
+       <string>Debug2</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>spegni_console()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>562</x>
+     <y>98</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>612</x>
+     <y>39</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>goToMainMenu()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>611</x>
+     <y>141</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>656</x>
+     <y>204</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_PosPannello()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>262</x>
+     <y>232</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>433</x>
+     <y>169</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_4</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>ruota_e_cerca_aruco()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>288</x>
+     <y>203</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>423</x>
+     <y>132</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_5</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_pannello_MoveToSelectedAruco()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>332</x>
+     <y>262</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>467</x>
+     <y>198</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_6</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_pannello_nextAruco()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>236</x>
+     <y>293</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>485</x>
+     <y>236</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_7</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>stop_traj_clicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>635</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>653</x>
+     <y>307</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_8</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>ruota_e_cerca_pannello()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>176</x>
+     <y>174</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>63</x>
+     <y>151</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_9</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>centra_aruco()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>481</x>
+     <y>348</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>437</x>
+     <y>346</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_10</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>centra_aruco_and_zoom_in()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>471</x>
+     <y>392</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>348</x>
+     <y>380</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_11</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>centra_aruco_and_zoom_out()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>470</x>
+     <y>411</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>297</x>
+     <y>406</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_12</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_go_pos_iniziale()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>208</x>
+     <y>128</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>37</x>
+     <y>110</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_13</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_debug1()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>99</x>
+     <y>450</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>130</x>
+     <y>451</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_14</sender>
+   <signal>clicked()</signal>
+   <receiver>stop_traj_button</receiver>
+   <slot>automazione_debug2()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>84</x>
+     <y>474</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>146</x>
+     <y>491</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>prova()</slot>
+  <slot>pub()</slot>
+  <slot>service()</slot>
+  <slot>pB_esegui()</slot>
+  <slot>spegni_console()</slot>
+  <slot>fRandomOrientationcheck()</slot>
+  <slot>pB_setJoints()</slot>
+  <slot>goToJoystick()</slot>
+  <slot>joystick_moveJoints()</slot>
+  <slot>goToManualPose()</slot>
+  <slot>goToAutomazione()</slot>
+  <slot>goToMainMenu()</slot>
+  <slot>automazione_PosPannello()</slot>
+  <slot>automazione_pannello_Completa()</slot>
+  <slot>automazione_pannello_MoveToSelectedAruco()</slot>
+  <slot>automazione_pannello_nextAruco()</slot>
+  <slot>stop_traj_clicked()</slot>
+  <slot>ruota_e_cerca_pannello()</slot>
+  <slot>ruota_e_cerca_aruco()</slot>
+  <slot>centra_aruco()</slot>
+  <slot>centra_aruco_and_zoom_in()</slot>
+  <slot>centra_aruco_and_zoom_out()</slot>
+  <slot>automazione_go_pos_iniziale()</slot>
+  <slot>automazione_debug1()</slot>
+  <slot>automazione_debug2()</slot>
+ </slots>
+</ui>
