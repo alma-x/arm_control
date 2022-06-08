@@ -1501,7 +1501,7 @@ bool save_aruco_in_txt(){
   ofstream outFile;
   string nome,tipo;
   string pkgpath = ros::package::getPath("arm_control");
-  string path_txt="/txt/aruco_values.txt";
+  string path_txt="/config/aruco_values.txt";
   string path_total=pkgpath + path_txt;
   if(show_log)
     cout<<"percorso txt: "<<path_total<<endl<<endl;
@@ -4703,7 +4703,7 @@ void load_parameters()
     ifstream inFile;
     string nome,tipo;
     string pkgpath = ros::package::getPath("arm_control");
-    string path_txt="/txt/standard_positions.txt";
+    string path_txt="/config/standard_positions.txt";
     string path_total=pkgpath + path_txt;
     cout<<"percorso txt: "<<path_total<<endl<<endl;
     inFile.open(path_total);
@@ -4941,7 +4941,7 @@ bool load_aruco_values_from_txt(){
   ifstream inFile;
   string nome,tipo;
   string pkgpath = ros::package::getPath("arm_control");
-  string path_txt="/txt/aruco_values.txt";
+  string path_txt="/config/aruco_values.txt";
   string path_total=pkgpath + path_txt;
   cout<<"percorso txt: "<<path_total<<endl<<endl;
   inFile.open(path_total);
