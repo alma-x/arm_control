@@ -3,14 +3,14 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 from PyQt5 import uic, QtWidgets,QtGui
 import rospy
 from std_msgs.msg import String
-from ur3_control.srv import UserInterface,UserInterfaceRequest,aruco_service,aruco_serviceRequest
+from arm_control.srv import UserInterface,UserInterfaceRequest,aruco_service,aruco_serviceRequest
 from geometry_msgs.msg import Pose
 from tf import transformations
 import rospkg
 import math
 rospack = rospkg.RosPack()
 
-pathTopkg=rospack.get_path('ur3_control')
+pathTopkg=rospack.get_path('arm_control')
 class Manual_pose(QWidget):
     global widget,window_mp,window_joystick,window_main,serv,app
     def __init__(self):

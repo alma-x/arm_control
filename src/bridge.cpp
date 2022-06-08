@@ -25,7 +25,7 @@ void cv_callback(const arm_control::cv_to_bridge& msg){
   msg_from_cv=msg;
 
 
-  if(bool_md_bpa && msg_from_cv.success && msg.id_aruco==ID_DA_BLOCCARE){
+  if(bool_md_bpa && msg_from_cv2.success && msg.id_aruco==ID_DA_BLOCCARE){
     ROS_INFO("BRIDGE:BLOCCO ROBOT");
     bool_md_bpa=false;
 
@@ -61,7 +61,7 @@ bool callback_modality(arm_control::aruco_service::Request &req, arm_control::ar
      ROS_INFO("Bridge:Chiamata ricevuta:\nModalita:%s\n\n",req.modality.c_str());
 
   if(str_md_bpa==req.modality){
-    ID_DA_BLOCCARE=msg_from_cv.id_aruco;
+    ID_DA_BLOCCARE=msg_from_cv2.id_aruco;
     ROS_INFO("BRIDGE: BLOCCO APPENA VEDO ARUCO %d",ID_DA_BLOCCARE);
     bool_md_bpa=true;
   }
@@ -119,14 +119,14 @@ bool callback_modality(arm_control::aruco_service::Request &req, arm_control::ar
         ROS_INFO("targets remaining:%d",res.moreTargets);
 
   }  
-  res.aruco_found=msg_from_cv.success;
-  res.x=msg_from_cv.x;
-  res.y=msg_from_cv.y;
-  res.z=msg_from_cv.z;
-  res.vector=msg_from_cv.vector;
-  res.id_aruco=msg_from_cv.id_aruco;
+  res.aruco_found=msg_from_cv2.success;
+  res.x=msg_from_cv2.x;
+  res.y=msg_from_cv2.y;
+  res.z=msg_from_cv2.z;
+  res.vector=msg_from_cv2.vector;
+  res.id_aruco=msg_from_cv2.id_aruco;
   res.finger_joint=float(msg_from_joints.position[1]);
-  res.all_aruco_found=msg_from_cv.aruco_found;
+  res.all_aruco_found=msg_from_cv2.aruco_found;
   return true;
 }
 
@@ -176,7 +176,7 @@ int main(int argc, char** argv){
   MoveGroupInterface move_group(PLANNING_GROUP);
 
   robot=&move_group;
-  msg_from_cv.success=false;
+  msg_from_cv2.success=false;
   bool_md_bpa=false;
 
   while(ros::ok() && !bool_exit){
