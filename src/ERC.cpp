@@ -183,7 +183,7 @@ void param_control(){
 
   switch(current_objective){
   case 1:{
-
+    // environment exploration
     esplora_tutti_gli_aruco();
     stampa_aruco_su_excel();
     PosizioniBase(str_pos_iniziale);
@@ -193,7 +193,7 @@ void param_control(){
     start_node.setParam("objective",0);
     break;}
   case 2:{
-    // button sequence
+    // press button sequence
     ROS_INFO("Aruco buttons:");
     string buttons_string;
     //get button sequence
@@ -276,9 +276,8 @@ void param_control(){
     start_node.setParam("objective",0);
     break;}
   case 3:{
-
+    //sensor pickup
     solleva_imu();
-
     start_node.setParam("objective",0);
     break;}
   case 4:{
@@ -310,12 +309,22 @@ void param_control(){
     break;
   }
   case 6:{
+    // store inspection window's lid
+    break;
+  }
+  case 7:{
     // inspect window
     go_and_recognize_id_in_inspection_window();
     start_node.setParam("objective",0);
     break;
   }
-  case 7:{
+  case 8:{
+    // place cover back
+
+    start_node.setParam("objective",0);
+    break;
+  }
+  case 9:{
     // push button of hidden id
     string id_nascosto;
     start_node.getParam("hidden_id",id_nascosto);
@@ -329,13 +338,7 @@ void param_control(){
     start_node.setParam("objective",0);
     break;
   }
-  case 8:{
-    // place cover back
-
-    start_node.setParam("objective",0);
-    break;
-  }
-  case 9:{
+  case 10:{
     PosizioniBase(str_pos_iniziale);
     action_gripper("open");
 
