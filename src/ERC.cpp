@@ -310,6 +310,7 @@ void param_control(){
   }
   case 6:{
     // store inspection window's lid
+    
     break;
   }
   case 7:{
