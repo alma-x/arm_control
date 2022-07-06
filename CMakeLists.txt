@@ -34,6 +34,7 @@ project(arm_control)
 
  add_service_files(
    FILES
+   DummyMarker.srv
    UserInterface.srv
    aruco_service.srv
    cv_server.srv
