@@ -31,6 +31,7 @@ from arm_control.msg import *
   
 flagMiddlePanelCreated=False
 bool_exit=False
+
 class Transformation_class():
   def __init__(self):
         null=0
