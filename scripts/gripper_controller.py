@@ -39,7 +39,7 @@ if __name__=='__main__':
     gripperCommander()
     try:
         rospy.spin()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt or rospy.ROSInterruptException:
         rospy.signal_shutdown('Esc key pressed; Closing node: {}'.format(node_name))
 
 
