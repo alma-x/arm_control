@@ -160,6 +160,7 @@ class Pose_valid():
     def __init__(self):
         self.is_valid = False
         self.pose = Pose()
+        
 class Move_group_class(object):
   """Move_group_class"""
   def __init__(self):
@@ -568,6 +569,7 @@ class Move_group_class(object):
     print("\n\nActive joints:")
     print(self.move_group.get_active_joints())
     aruco_library.print_situation_aruco()
+
 class Comunication_class(object):
   def __init__(self):
     super(Comunication_class, self).__init__()
@@ -577,30 +579,7 @@ class Comunication_class(object):
   def call_bridge_service(self,first_information,second_information):
     print("Deprecated")
     return self.read_data_from_cv()
-    # try:
-    #       req=aruco_serviceRequest()
-    #       req.modality=first_information
-    #       req.second_information=second_information
 
-    #       msg = self.bridge_service_information(req)
-
-    #       resp=aruco_serviceResponse()
-    #       resp.x=msg.x
-    #       resp.y=msg.y
-    #       resp.z=msg.z
-    #       resp.all_aruco_found=msg.all_aruco_found
-    #       resp.aruco_found=msg.aruco_found
-    #       resp.dim=msg.dim
-    #       resp.finger_joint=msg.finger_joint
-    #       resp.id_aruco=msg.id_aruco
-    #       resp.moreTargets=msg.moreTargets
-    #       resp.vector=msg.vector
-
-    #       #self.print_bridge_response(resp)
-          
-    #       return resp
-    # except rospy.ServiceException as e:
-      #print("Service call failed: %s"%e)
   def call_cv_service(self,first_information,second_information):
     
     try:

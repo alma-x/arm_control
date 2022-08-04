@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<launch>
+
+<!-- ARG+PARAM: camera name and topic
+    ?automatically find thosa data? -->
+
+<!-- NODES -->
+<!--NODO0: preprocessing image-->
+ 
+<!-- NODE1: high level controller\, 
+            (TODO) cosmethic superimpose to image  -->
+        <node 
+                name="controller" 
+                pkg="arm_control" 
+                type="fake_controller.py" 
+                respawn="true" 
+                output="screen"
+                launch-prefix="xterm -e"
+        ></node>
+    
+<!-- NODE2: dummy gripper controller -->
+        <node 
+                name="gripper_controller" 
+                pkg="arm_control" 
+                type="gripper_controller.py" 
+                respawn="true" 
+                output="screen"
+                launch-prefix="xterm -e"
+        ></node>
+        
+<!--NODE3: collision service -->
+        <!-- <node 
+                name="inquirer_aruco" 
+                pkg="arm_vision" 
+                type="inquirer_aruco.py" 
+                respawn="true" 
+                output="screen"
+                launch-prefix="xterm -e"
+        ></node> -->
+
+</launch>

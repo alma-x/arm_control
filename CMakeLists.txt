@@ -35,6 +35,7 @@ project(arm_control)
  add_service_files(
    FILES
    DummyMarker.srv
+   GripperCommand.srv
    UserInterface.srv
    aruco_service.srv
    cv_server.srv
@@ -80,6 +81,8 @@ target_link_libraries(prova_cpp ${catkin_LIBRARIES} ${Boost_LIBRARIES})
    scripts/collision_interface.py
    scripts/solve_equation.py
    scripts/control_py
+   scripts/fake_controller.py
+   scripts/gripper_controller.py
    QT/user_interface.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
