@@ -118,21 +118,14 @@ class CollisionInterface:
     self.scene=""
     self.robot=""
     self.BASE_CREATED=False
-    self.BASE_MARKERS=[10,14]
     self.ROBOT_FRAME_CREATED=False
     self.MID_PANEL_CREATED=False
-    self.MID_PANEL_MARKERS=[marker for marker in range (1,10)]
     self.BUTTONS_CREATED=[False]*9
     self.LEFT_PANEL_CREATED=False
-    self.LEFT_PANEL_MARKERS=[11]
     self.IMU_CREATED=False
-    self.IMU_MARKERS=[10]
     self.RIGHT_PANEL_CREATED=False
-    self.RIGHT_PANEL_MARKERS=[12,13]
     self.LID_CREATED=False
-    self.LID_MARKERS=[13]
     self.INSPECTION_BOX_CREATED=False
-    self.INSPECTION_BOX_MARKERS=[12,13]
     self.commander=moveit_commander()
     TIMER_DURATION=rospy.Duration(secs=1)
     self.update_timer=rospy.Timer(TIMER_DURATION,self.updateObjects)
