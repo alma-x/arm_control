@@ -3,15 +3,36 @@ import copy
 from pickle import OBJ
 import sys
 from math import pi
+from numpy import where
 from geometry_msgs.msg import Pose
 import geometry_msgs.msg
 import moveit_commander
 import moveit_msgs.msg
+from moveit_msgs.msg import CollisionObject
 import rospy
 from moveit_commander.conversions import pose_to_list
 from std_msgs.msg import String
-from arm_control.srv import (collision_object_srv, collision_object_srvRequest,
-                             collision_object_srvResponse)
+from arm_control.srv import collision_object_srv, collision_object_srvRequest,\
+                             collision_object_srvResponse, DummyMarker
+
+
+
+inquiries_service='aruco_inquiries'
+
+def arucoInquiriesClient(id):
+    rospy.wait_for_service(inquiries_service)
+
+    try:
+        inquirer=rospy.ServiceProxy(inquiries_service,DummyMarker)
+        inquiry_result=inquirer(id)
+
+        if not inquiry_result.found:
+          print(str(id),' not found yet')
+        return inquiry_result
+    except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+
 
 def callback_service(req):
     global bool_exit
@@ -93,9 +114,185 @@ class Box:
 class CollisionInterface:
   def __init__(self):
     OBJECTS_NUMBER=10
-    self.boxes=[Box()]*OBJECTS_NUMBER
+    self.objects=[Box()]*OBJECTS_NUMBER
     self.scene=""
     self.robot=""
+    self.BASE_CREATED=False
+    self.BASE_MARKERS=[10,14]
+    self.ROBOT_FRAME_CREATED=False
+    self.MID_PANEL_CREATED=False
+    self.MID_PANEL_MARKERS=[marker for marker in range (1,10)]
+    self.BUTTONS_CREATED=[False]*9
+    self.LEFT_PANEL_CREATED=False
+    self.LEFT_PANEL_MARKERS=[11]
+    self.IMU_CREATED=False
+    self.IMU_MARKERS=[10]
+    self.RIGHT_PANEL_CREATED=False
+    self.RIGHT_PANEL_MARKERS=[12,13]
+    self.LID_CREATED=False
+    self.LID_MARKERS=[13]
+    self.INSPECTION_BOX_CREATED=False
+    self.INSPECTION_BOX_MARKERS=[12,13]
+    self.commander=moveit_commander()
+    TIMER_DURATION=rospy.Duration(secs=1)
+    self.update_timer=rospy.Timer(TIMER_DURATION,self.updateObjects)
+
+
+  def updateObjects(self,_):
+    if not self.BASE_CREATED:
+      BASE_POSES=[arucoInquiriesClient(id) for id in self.BASE_MARKERS]
+      if all([pose.found for pose in BASE_POSES]):
+        self.computeBasePose([pose.pose for pose in BASE_POSES])
+
+    if not self.ROBOT_FRAME_CREATED:
+      if self.MID_PANEL_CREATED:
+        self.computeRobotFramePose()
+
+    if not self.MID_PANEL_CREATED:
+      MID_PANEL_POSES=[arucoInquiriesClient(id) for id in self.MID_PANEL_MARKERS]
+      if all([pose.found for pose in MID_PANEL_POSES]):
+        self.computeMidPanelPose([pose.pose for pose in MID_PANEL_POSES])
+
+    if not all(self.BUTTONS_CREATED):
+      for not_created in where(self.BUTTONS_CREATED):
+        BUTTON_POSE=arucoInquiriesClient(not_created)
+        if BUTTON_POSE.found:
+          self.computeButtonPose(BUTTON_POSE.pose)
+    
+    if not self.LEFT_PANEL_CREATED:
+      LEFT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.LEFT_PANEL_MARKERS]
+      if all([pose.found for pose in LEFT_PANEL_POSES]):
+        self.computeLeftPanelPose([pose.pose for pose in LEFT_PANEL_POSES])
+
+    if not self.IMU_CREATED:
+      IMU_POSES=[arucoInquiriesClient(id) for id in self.IMU_MARKERS]
+      if all([pose.found for pose in IMU_POSES]):
+        self.computeImuPose([pose.pose for pose in IMU_POSES])
+
+    if not self.RIGHT_PANEL_CREATED:
+      RIGHT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.RIGHT_PANEL_MARKERS]
+      if all([pose.found for pose in RIGHT_PANEL_POSES]):
+        self.computeRightPanelPose([pose.pose for pose in RIGHT_PANEL_POSES])
+    
+    if not self.LID_CREATED:
+      LID_POSES=[arucoInquiriesClient(id) for id in self.LID_MARKERS]
+      if all([pose.found for pose in LID_POSES]):
+        self.computeLidPose([pose.pose for pose in LID_POSES])
+
+    if not self.INSPECTION_BOX_CREATED:
+      INSPECTION_BOX_POSES=[arucoInquiriesClient(id) for id in self.INSPECTION_BOX_MARKERS]
+      if all([pose.found for pose in INSPECTION_BOX_POSES]):
+        self.computeInspectionBoxPose([pose.pose for pose in INSPECTION_BOX_POSES])
+
+
+  def computeBasePose(self):
+    """
+      z=average(14, 10+offset)
+      y=base_frame+offset
+      x=base_frame+offset
+      normal=z
+      size= fixed
+    """
+    self.BASE_CREATED=True
+
+  def computeRobotFramePose(self):
+    """
+      z=base_frame+offset
+      y=base_frame+offset
+      x=average(mid_panel,base_frame+offset)
+      orientation=?
+      size= fixed
+    """
+    self.ROBOT_FRAME_CREATED=True
+
+  def computeMidPanelPose(self):
+    """
+      z=average(1-9)
+      y=average(1-9)
+      x=average(1-9)
+      normal=x
+      size= fixed
+    """
+    self.MID_PLANE_CREATED=True
+
+  def computeButtonsPose(self):
+    # average pose 1-9, but use i in 1-9 for 
+    """
+      z=average(column)
+      y=average(row)
+      x=midplane
+      orientation=?
+      size= fixed
+    """
+    self.computeButtonPose()
+
+
+  def computeButtonPose(self,id):
+    # i in 1-9
+    self.BUTTON_CREATED[id]=True
+
+
+  def computeLeftPanelPose(self):
+    """
+      z=midplane+offset
+      y=11+offset(x,y)
+      x=11+(offsetx,y)
+      normal=11(x,y)
+      size=
+      - top= 11 + offset
+      - left= 11 + offset
+      - bottm, right = fixed
+    """
+    self.LEFT_PANEL_CREATED=True
+
+
+  def computeImuPose(self):
+    """
+      z=10+offset
+      y=10+offset(x,y)
+      x=10+offset(x,y)
+      orientation=?
+      size= fixed
+    """
+    self.IMU_CREATED=True
+
+
+
+  def computeRightPanelPose(self):
+    """
+      z=13+offset
+      y=12+offset(x,y)
+      x=12+offset(x,y)
+      orientation=12 (13)
+      size= fixed
+    """
+    self.RIGHT_PANEL_CREATED=True
+
+
+  def computeLidPose(self):
+    """
+      z=13
+      y=13+offset(x,y)
+      x=13+offset(x,y)
+      orientation=?
+      size= fixed
+
+      LID AND HANDLE?
+    """
+    self.LID_CREATED=True
+
+
+  def computeInspectionBoxPose(self):
+    # 12, 13
+    """
+      z=12
+      y=average(13+offset(x,y), 12+offset(x,y))
+      x=average(13+offset(x,y), 12+offset(x,y))
+      orientation=?
+      size= using arucos + offsets
+    """
+    self.INSPECTION_BOX_CREATED=True
+
 
 
   def wait_for_state_update(self, box_is_known=False, box_is_attached=False, timeout=4):
@@ -180,13 +377,41 @@ if __name__ == '__main__':
     pass
 
 """
-https://ros-planning.github.io/moveit_tutorials/doc/move_group_python_interface/move_group_python_interface_tutorial.html#adding-objects-to-the-planning-scene
-
-ADDING BOX:
 scene = moveit_commander.PlanningSceneInterface()
 
+ADD PLANE:
+my_obj=moveit_msgs.msg.CollisionObject()
+-> ha piani, forme primitive, sotto-frame,....
+scene.applyCollisionObject(my_obj) NON ESISTE IN PY 
+  (MA BANALMENTE X IMPLEMENTARLO BASTA PUBLICARE UN CollisionObject SUL TOPIC GIUSTO,
+    CON operation=ADD, MA ATTENZIONE AL CONTROLLO DI AVER EFFETTICAMENTE COMPLETATO L'AZIONE)
+https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
+MA ESISTE:
+  scene.add_plane(self, name, pose, normal=(0, 0, 1), offset=0):
+        {   # ax + by + cz + d = 0
+
+            # a := coef[0]
+            # b := coef[1]
+            # c := coef[2]
+            # d := coef[3]
+          co = CollisionObject()
+          co.operation = CollisionObject.ADD
+          co.id = name
+          co.header = pose.header
+          p = Plane()
+          p.coef = list(normal)
+          p.coef.append(offset)
+          co.planes = [p]
+          co.plane_poses = [pose.pose]
+          self.__submit(co, attach=False)
+        }
+
+
+ADDING BOX:
+https://ros-planning.github.io/moveit_tutorials/doc/move_group_python_interface/move_group_python_interface_tutorial.html#adding-objects-to-the-planning-scene
+
 box_pose = geometry_msgs.msg.PoseStamped()
-box_pose.header.frame_id = BOX_FRAME_NAME
+box_pose.header.frame_id = REFERENCE_FRAME
 box_pose.pose.orientation.w = 1.0
 ...
 box_pose.pose.position.z = 0.11
