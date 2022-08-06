@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import copy
-from pickle import OBJ
+from socket import timeout
 import sys
 from math import pi
 from numpy import where
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, TransformStamped,PoseStamped
 import geometry_msgs.msg
 import moveit_commander
 import moveit_msgs.msg
 from moveit_msgs.msg import CollisionObject
 import rospy
+import tf2_ros
 from moveit_commander.conversions import pose_to_list
 from std_msgs.msg import String
 from arm_control.srv import collision_object_srv, collision_object_srvRequest,\
@@ -115,9 +116,11 @@ class CollisionInterface:
   def __init__(self):
     OBJECTS_NUMBER=10
     self.objects=[Box()]*OBJECTS_NUMBER
-    self.scene=""
+    self.commander=moveit_commander
+    self.scene= self.commander.PlanningSceneInterface()
     self.robot=""
-    self.BASE_CREATED=False
+    self.BASE_FRAME="base_link"
+    self.TABLE_CREATED=False
     self.ROBOT_FRAME_CREATED=False
     self.MID_PANEL_CREATED=False
     self.BUTTONS_CREATED=[False]*9
@@ -125,91 +128,115 @@ class CollisionInterface:
     self.IMU_CREATED=False
     self.RIGHT_PANEL_CREATED=False
     self.LID_CREATED=False
-    self.INSPECTION_BOX_CREATED=False
-    self.commander=moveit_commander()
+    self.INSPECTION_PANEL_CREATED=False
+    self.tf_buffer=tf2_ros.Buffer(cache_time=rospy.Duration(1))
+    self.tf_listener=tf2_ros.TransformListener(self.tf_buffer,queue_size=None)
     TIMER_DURATION=rospy.Duration(secs=1)
+    print('ready to create objects')
     self.update_timer=rospy.Timer(TIMER_DURATION,self.updateObjects)
 
 
   def updateObjects(self,_):
-    if not self.BASE_CREATED:
-      BASE_POSES=[arucoInquiriesClient(id) for id in self.BASE_MARKERS]
-      if all([pose.found for pose in BASE_POSES]):
-        self.computeBasePose([pose.pose for pose in BASE_POSES])
+    known_obj_names=self.scene.get_known_object_names()
+    print(known_obj_names)
+    # print(self.scene.get_object_poses(known_obj_names))
+    # print(self.scene.get_objects())
+
+    if not self.TABLE_CREATED:
+      exists_reference,reference_tf=self.checkObjectReference('table_')
+      if exists_reference:
+        self.createTablePlane(reference_tf)
 
     if not self.ROBOT_FRAME_CREATED:
-      if self.MID_PANEL_CREATED:
-        self.computeRobotFramePose()
+      exists_reference,reference_tf=self.checkObjectReference('robot_frame')
+      if exists_reference:
+        self.createRobotFrameBox(reference_tf)
 
     if not self.MID_PANEL_CREATED:
-      MID_PANEL_POSES=[arucoInquiriesClient(id) for id in self.MID_PANEL_MARKERS]
-      if all([pose.found for pose in MID_PANEL_POSES]):
-        self.computeMidPanelPose([pose.pose for pose in MID_PANEL_POSES])
+      exists_reference,reference_tf=self.checkObjectReference("mid_panel")
+      if exists_reference:
+        self.createMidPanelPlane(reference_tf)
 
-    if not all(self.BUTTONS_CREATED):
-      for not_created in where(self.BUTTONS_CREATED):
-        BUTTON_POSE=arucoInquiriesClient(not_created)
-        if BUTTON_POSE.found:
-          self.computeButtonPose(BUTTON_POSE.pose)
-    
     if not self.LEFT_PANEL_CREATED:
-      LEFT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.LEFT_PANEL_MARKERS]
-      if all([pose.found for pose in LEFT_PANEL_POSES]):
-        self.computeLeftPanelPose([pose.pose for pose in LEFT_PANEL_POSES])
+      exists_reference,reference_tf=self.checkObjectReference("left_panel")
+      if exists_reference:
+        self.createLeftPanelPlane(reference_tf)
+
+    # if not all(self.BUTTONS_CREATED):
+    #   for not_created in where(self.BUTTONS_CREATED):
+    #     BUTTON_POSE=arucoInquiriesClient(not_created)
+    #     if BUTTON_POSE.found:
+    #       self.computeButtonPose(BUTTON_POSE.pose)
 
     if not self.IMU_CREATED:
-      IMU_POSES=[arucoInquiriesClient(id) for id in self.IMU_MARKERS]
-      if all([pose.found for pose in IMU_POSES]):
-        self.computeImuPose([pose.pose for pose in IMU_POSES])
+      exists_reference,reference_tf=self.checkObjectReference("imu_")
+      if exists_reference:
+        self.createImuBox(reference_tf)
 
-    if not self.RIGHT_PANEL_CREATED:
-      RIGHT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.RIGHT_PANEL_MARKERS]
-      if all([pose.found for pose in RIGHT_PANEL_POSES]):
-        self.computeRightPanelPose([pose.pose for pose in RIGHT_PANEL_POSES])
+    # if not self.RIGHT_PANEL_CREATED  and exists_base():
+    #   RIGHT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.RIGHT_PANEL_MARKERS]
+    #   if all([pose.found for pose in RIGHT_PANEL_POSES]):
+    #     self.computeRightPanelPose([pose.pose for pose in RIGHT_PANEL_POSES])
+
+    # if not self.LID_CREATED:
+    #   LID_POSES=[arucoInquiriesClient(id) for id in self.LID_MARKERS]
+    #   if all([pose.found for pose in LID_POSES]):
+    #     self.computeLidPose([pose.pose for pose in LID_POSES])
+
+    # if not self.INSPECTION_PANEL_CREATED:
+    #   INSPECTION_PANEL_POSES=[arucoInquiriesClient(id) for id in self.INSPECTION_PANEL_MARKERS]
+    #   if all([pose.found for pose in INSPECTION_PANEL_POSES]):
+    #     self.computeInspectionBoxPose([pose.pose for pose in INSPECTION_PANEL_POSES])
+
+  def checkObjectReference(self,target_frame):
+    global tf_buffer
+    check_timeout=0
+    # has .transform.{translation.{x,y,z},rotation.{x,y,z,w}
+    while True:
+        try:
+            return True, self.tf_buffer.lookup_transform(self.BASE_FRAME,target_frame,rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, \
+            tf2_ros.ExtrapolationException): continue
+        finally:
+          check_timeout+=1
+          if check_timeout>50: return False,None
+
+  def createTablePlane(self,reference_tf):
+    print('creating plane for: '+'table_') 
+    plane_pose=PoseStamped()
+    plane_pose.header=reference_tf.header
+    plane_pose.pose.position.x=reference_tf.transform.translation.x
+    plane_pose.pose.position.y=reference_tf.transform.translation.y
+    plane_pose.pose.position.z=reference_tf.transform.translation.z
+    # self.scene.add_plane("table_hb", plane_pose, normal=(0, 0, 1), offset=0)
+    self.scene.add_box("table_hb", plane_pose, size=(.8, .8, .0005))
     
-    if not self.LID_CREATED:
-      LID_POSES=[arucoInquiriesClient(id) for id in self.LID_MARKERS]
-      if all([pose.found for pose in LID_POSES]):
-        self.computeLidPose([pose.pose for pose in LID_POSES])
+    self.TABLE_CREATED=True
 
-    if not self.INSPECTION_BOX_CREATED:
-      INSPECTION_BOX_POSES=[arucoInquiriesClient(id) for id in self.INSPECTION_BOX_MARKERS]
-      if all([pose.found for pose in INSPECTION_BOX_POSES]):
-        self.computeInspectionBoxPose([pose.pose for pose in INSPECTION_BOX_POSES])
+  def createRobotFrameBox(self,reference_tf):
+    print('creating box for: '+'robot_frame') 
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
 
-
-  def computeBasePose(self):
-    """
-      z=average(14, 10+offset)
-      y=base_frame+offset
-      x=base_frame+offset
-      normal=z
-      size= fixed
-    """
-    self.BASE_CREATED=True
-
-  def computeRobotFramePose(self):
-    """
-      z=base_frame+offset
-      y=base_frame+offset
-      x=average(mid_panel,base_frame+offset)
-      orientation=?
-      size= fixed
-    """
+    self.scene.add_box("robot_frame_hb", box_pose, size=(.075, .075, .075))
     self.ROBOT_FRAME_CREATED=True
 
-  def computeMidPanelPose(self):
-    """
-      z=average(1-9)
-      y=average(1-9)
-      x=average(1-9)
-      normal=x
-      size= fixed
-    """
+  def createMidPanelPlane(self,reference_tf):
+    print('creating plane for: '+'mid_panel') 
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+
+    self.scene.add_box("mid_panel_hb", box_pose, size=(.0005, .3, .5))
     self.MID_PLANE_CREATED=True
 
   def computeButtonsPose(self):
-    # average pose 1-9, but use i in 1-9 for 
+    # average pose 1-9, but use i in 1-9 for
     """
       z=average(column)
       y=average(row)
@@ -225,28 +252,28 @@ class CollisionInterface:
     self.BUTTON_CREATED[id]=True
 
 
-  def computeLeftPanelPose(self):
-    """
-      z=midplane+offset
-      y=11+offset(x,y)
-      x=11+(offsetx,y)
-      normal=11(x,y)
-      size=
-      - top= 11 + offset
-      - left= 11 + offset
-      - bottm, right = fixed
-    """
+  def createLeftPanelPlane(self,reference_tf):
+    print('creating plane for: '+'left_panel') 
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+
+    self.scene.add_box("left_panel_hb", box_pose, size=(.0005, .3, .5))
     self.LEFT_PANEL_CREATED=True
 
 
-  def computeImuPose(self):
-    """
-      z=10+offset
-      y=10+offset(x,y)
-      x=10+offset(x,y)
-      orientation=?
-      size= fixed
-    """
+  def createImuBox(self,reference_tf):
+    print('creating plane for: '+'imu_') 
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+
+    self.scene.add_box("imu_hb", box_pose, size=(.04, .05, .5))
+    
     self.IMU_CREATED=True
 
 
@@ -284,7 +311,7 @@ class CollisionInterface:
       orientation=?
       size= using arucos + offsets
     """
-    self.INSPECTION_BOX_CREATED=True
+    self.INSPECTION_PANEL_CREATED=True
 
 
 
@@ -361,9 +388,10 @@ def collisionInterface():
 if __name__ == '__main__':
   node_name="collision_interface"
   rospy.init_node(node_name,anonymous=False)
-  collisionInterface()
+  # collisionInterface()
+  collisor=CollisionInterface()
 
-  
+
   try:
     rospy.spin()
   except rospy.ROSInterruptException or KeyboardInterrupt:
@@ -375,7 +403,7 @@ scene = moveit_commander.PlanningSceneInterface()
 ADD PLANE:
 my_obj=moveit_msgs.msg.CollisionObject()
 -> ha piani, forme primitive, sotto-frame,....
-scene.applyCollisionObject(my_obj) NON ESISTE IN PY 
+scene.applyCollisionObject(my_obj) NON ESISTE IN PY
   (MA BANALMENTE X IMPLEMENTARLO BASTA PUBLICARE UN CollisionObject SUL TOPIC GIUSTO,
     CON operation=ADD, MA ATTENZIONE AL CONTROLLO DI AVER EFFETTICAMENTE COMPLETATO L'AZIONE)
 https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
