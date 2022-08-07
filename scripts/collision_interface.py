@@ -90,19 +90,33 @@ class MoveGroupPythonIntefaceTutorial(object):
 
 MAX_MID_PANEL_ARUCO_ID=4
 # MAX_MID_PANEL_ARUCO_ID=9
-class Box:
-  def __init__(self):
-    self.name=""
-    self.pose=Pose()
-    self.size=[]
+# class Box:
+#   def __init__(self):
+#     self.name=""
+#     self.pose=Pose()
+#     self.size=[]
+
+
+
+
+
+
+
+
+
+
+
 
 class CollisionInterface:
   def __init__(self):
-    OBJECTS_NUMBER=10
-    self.objects=[Box()]*OBJECTS_NUMBER
-    self.commander=moveit_commander
-    self.scene= self.commander.PlanningSceneInterface()
-    self.robot=""
+    # OBJECTS_NUMBER=10
+    # self.objects=[Box()]*OBJECTS_NUMBER
+    self.scene= moveit_commander.PlanningSceneInterface()
+    self.robot=moveit_commander.RobotCommander()
+    self.GROUP_NAME="manipulator"
+    self.move_group = moveit_commander.MoveGroupCommander(self.GROUP_NAME)
+    # planning_frame=self.move_group.get_planning_frame()#:world==base_link
+    # pose_reference_frame=self.move_group.get_pose_reference_frame()#:world==base_link
     self.BASE_FRAME="base_link"
     self.TABLE_CREATED=False
     self.ROBOT_FRAME_CREATED=False
@@ -204,10 +218,14 @@ class CollisionInterface:
     plane_pose.pose.position.x=reference_tf.transform.translation.x
     plane_pose.pose.position.y=reference_tf.transform.translation.y
     plane_pose.pose.position.z=reference_tf.transform.translation.z
+    plane_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    plane_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    plane_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    plane_pose.pose.orientation.w=reference_tf.transform.rotation.w
     # self.scene.add_plane("table_hb", plane_pose, normal=(0, 0, 1), offset=0)
     self.scene.add_box("table_hb", plane_pose, 
-                size=(self.CLEARANCE_SAFETY_COEF*.8, 
-                self.CLEARANCE_SAFETY_COEF*.8, 
+                size=(self.CLEARANCE_SAFETY_COEF*.75, 
+                self.CLEARANCE_SAFETY_COEF*.75, 
                 self.CLEARANCE_SAFETY_COEF*.0005))
     
     self.TABLE_CREATED=True
@@ -219,6 +237,10 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
 
     self.scene.add_box("robot_frame_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF*.75,
@@ -233,11 +255,15 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
 
     self.scene.add_box("mid_panel_hb", box_pose,
-                         size=(self.CLEARANCE_SAFETY_COEF*.0005,
-                         self.CLEARANCE_SAFETY_COEF* .3, 
-                         self.CLEARANCE_SAFETY_COEF*.5))
+                         size=(self.CLEARANCE_SAFETY_COEF*.3,
+                         self.CLEARANCE_SAFETY_COEF* .5, 
+                         self.CLEARANCE_SAFETY_COEF*.0005))
     self.MID_PANEL_CREATED=True
 
 
@@ -253,7 +279,7 @@ class CollisionInterface:
     box_pose.pose.orientation.x=reference_tf.transform.rotation.x
     box_pose.pose.orientation.y=reference_tf.transform.rotation.y
     box_pose.pose.orientation.z=reference_tf.transform.rotation.z
-    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
 
     # self.scene.add_box(reference_name+"_hb", box_pose, 
     #                           size=(self.CLEARANCE_SAFETY_COEF*.023,
@@ -274,12 +300,12 @@ class CollisionInterface:
     box_pose.pose.orientation.x=reference_tf.transform.rotation.x
     box_pose.pose.orientation.y=reference_tf.transform.rotation.y
     box_pose.pose.orientation.z=reference_tf.transform.rotation.z
-    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
 
     self.scene.add_box("left_panel_hb", box_pose, 
-                              size=(self.CLEARANCE_SAFETY_COEF*.0005,
-                              self.CLEARANCE_SAFETY_COEF* .25, 
-                              self.CLEARANCE_SAFETY_COEF*.36))
+                              size=(self.CLEARANCE_SAFETY_COEF*.25,
+                              self.CLEARANCE_SAFETY_COEF* .36, 
+                              self.CLEARANCE_SAFETY_COEF*.0005))
     self.LEFT_PANEL_CREATED=True
 
 
@@ -290,6 +316,10 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
 
     self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF* .05,
@@ -418,6 +448,7 @@ def collisionInterface():
 if __name__ == '__main__':
   node_name="collision_interface"
   rospy.init_node(node_name,anonymous=False)
+  moveit_commander.roscpp_initialize(sys.argv)
   # collisionInterface()
   collisor=CollisionInterface()
 
