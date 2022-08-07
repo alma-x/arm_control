@@ -5,10 +5,8 @@
     ?automatically find thosa data? -->
 
 <!-- NODES -->
-<!--NODO0: preprocessing image-->
  
-<!-- NODE1: high level controller\, 
-            (TODO) cosmethic superimpose to image  -->
+<!-- NODE1: high level controller -->
         <node 
                 name="controller" 
                 pkg="arm_control" 
@@ -29,13 +27,13 @@
         ></node>
         
 <!--NODE3: collision service -->
-        <!-- <node 
-                name="inquirer_aruco" 
-                pkg="arm_vision" 
-                type="inquirer_aruco.py" 
+        <node 
+                name="collision_interface" 
+                pkg="arm_control" 
+                type="collision_interface.py" 
                 respawn="true" 
                 output="screen"
                 launch-prefix="xterm -e"
-        ></node> -->
+        ></node>
 
 </launch>

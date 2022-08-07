@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import copy
-from socket import timeout
 import sys
 from math import pi
-from numpy import where
+import numpy as np
 from geometry_msgs.msg import Pose, TransformStamped,PoseStamped
 import geometry_msgs.msg
 import moveit_commander
@@ -15,23 +14,6 @@ from moveit_commander.conversions import pose_to_list
 from std_msgs.msg import String
 from arm_control.srv import collision_object_srv, collision_object_srvRequest,\
                              collision_object_srvResponse, DummyMarker
-
-
-
-inquiries_service='aruco_inquiries'
-
-def arucoInquiriesClient(id):
-    rospy.wait_for_service(inquiries_service)
-
-    try:
-        inquirer=rospy.ServiceProxy(inquiries_service,DummyMarker)
-        inquiry_result=inquirer(id)
-
-        if not inquiry_result.found:
-          print(str(id),' not found yet')
-        return inquiry_result
-    except rospy.ServiceException as e:
-        print("Service call failed: %s"%e)
 
 
 
@@ -106,6 +88,8 @@ class MoveGroupPythonIntefaceTutorial(object):
     self.eef_link = eef_link
     self.group_names = group_names
 
+MAX_MID_PANEL_ARUCO_ID=4
+# MAX_MID_PANEL_ARUCO_ID=9
 class Box:
   def __init__(self):
     self.name=""
@@ -123,12 +107,13 @@ class CollisionInterface:
     self.TABLE_CREATED=False
     self.ROBOT_FRAME_CREATED=False
     self.MID_PANEL_CREATED=False
-    self.BUTTONS_CREATED=[False]*9
+    self.BUTTONS_CREATED=[False]*MAX_MID_PANEL_ARUCO_ID
     self.LEFT_PANEL_CREATED=False
     self.IMU_CREATED=False
     self.RIGHT_PANEL_CREATED=False
     self.LID_CREATED=False
     self.INSPECTION_PANEL_CREATED=False
+    self.CLEARANCE_SAFETY_COEF=1.05
     self.tf_buffer=tf2_ros.Buffer(cache_time=rospy.Duration(1))
     self.tf_listener=tf2_ros.TransformListener(self.tf_buffer,queue_size=None)
     TIMER_DURATION=rospy.Duration(secs=1)
@@ -162,11 +147,14 @@ class CollisionInterface:
       if exists_reference:
         self.createLeftPanelPlane(reference_tf)
 
-    # if not all(self.BUTTONS_CREATED):
-    #   for not_created in where(self.BUTTONS_CREATED):
-    #     BUTTON_POSE=arucoInquiriesClient(not_created)
-    #     if BUTTON_POSE.found:
-    #       self.computeButtonPose(BUTTON_POSE.pose)
+    if not all(self.BUTTONS_CREATED):
+      for not_created in np.where(np.bitwise_not(self.BUTTONS_CREATED))[0]:
+        button_reference="button_"+str(not_created+1)
+        print('creating '+button_reference)
+        exists_reference,reference_tf=self.checkObjectReference(button_reference)
+        if exists_reference:
+          self.createButtonBox(button_reference)
+          self.BUTTONS_CREATED[not_created]=True
 
     if not self.IMU_CREATED:
       exists_reference,reference_tf=self.checkObjectReference("imu_")
@@ -209,7 +197,10 @@ class CollisionInterface:
     plane_pose.pose.position.y=reference_tf.transform.translation.y
     plane_pose.pose.position.z=reference_tf.transform.translation.z
     # self.scene.add_plane("table_hb", plane_pose, normal=(0, 0, 1), offset=0)
-    self.scene.add_box("table_hb", plane_pose, size=(.8, .8, .0005))
+    self.scene.add_box("table_hb", plane_pose, 
+                size=(self.CLEARANCE_SAFETY_COEF*.8, 
+                self.CLEARANCE_SAFETY_COEF*.8, 
+                self.CLEARANCE_SAFETY_COEF*.0005))
     
     self.TABLE_CREATED=True
 
@@ -221,7 +212,10 @@ class CollisionInterface:
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
 
-    self.scene.add_box("robot_frame_hb", box_pose, size=(.075, .075, .075))
+    self.scene.add_box("robot_frame_hb", box_pose, 
+                        size=(self.CLEARANCE_SAFETY_COEF*.75,
+                        self.CLEARANCE_SAFETY_COEF* .15, 
+                        self.CLEARANCE_SAFETY_COEF*.15))
     self.ROBOT_FRAME_CREATED=True
 
   def createMidPanelPlane(self,reference_tf):
@@ -232,24 +226,26 @@ class CollisionInterface:
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
 
-    self.scene.add_box("mid_panel_hb", box_pose, size=(.0005, .3, .5))
+    self.scene.add_box("mid_panel_hb", box_pose,
+                         size=(self.CLEARANCE_SAFETY_COEF*.0005,
+                         self.CLEARANCE_SAFETY_COEF* .3, 
+                         self.CLEARANCE_SAFETY_COEF*.5))
     self.MID_PLANE_CREATED=True
 
-  def computeButtonsPose(self):
-    # average pose 1-9, but use i in 1-9 for
-    """
-      z=average(column)
-      y=average(row)
-      x=midplane
-      orientation=?
-      size= fixed
-    """
-    self.computeButtonPose()
+  def createButtonBox(self,reference_tf):
+    reference_tf=TransformStamped()
+    reference_name=str(reference_tf.child_frame_id)
+    print('creating plane for: '+reference_name) 
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
 
-
-  def computeButtonPose(self,id):
-    # i in 1-9
-    self.BUTTON_CREATED[id]=True
+    self.scene.add_box(reference_name+"_hb", box_pose, 
+                              size=(self.CLEARANCE_SAFETY_COEF*.01,
+                              self.CLEARANCE_SAFETY_COEF* .1, 
+                              self.CLEARANCE_SAFETY_COEF*1))
 
 
   def createLeftPanelPlane(self,reference_tf):
@@ -260,7 +256,10 @@ class CollisionInterface:
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
 
-    self.scene.add_box("left_panel_hb", box_pose, size=(.0005, .3, .5))
+    self.scene.add_box("left_panel_hb", box_pose, 
+                              size=(self.CLEARANCE_SAFETY_COEF*.0005,
+                              self.CLEARANCE_SAFETY_COEF* .25, 
+                              self.CLEARANCE_SAFETY_COEF*.36))
     self.LEFT_PANEL_CREATED=True
 
 
@@ -272,13 +271,16 @@ class CollisionInterface:
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
 
-    self.scene.add_box("imu_hb", box_pose, size=(.04, .05, .5))
+    self.scene.add_box("imu_hb", box_pose, 
+                        size=(self.CLEARANCE_SAFETY_COEF* .05,
+                        self.CLEARANCE_SAFETY_COEF* .1, 
+                        self.CLEARANCE_SAFETY_COEF* .05))
     
     self.IMU_CREATED=True
 
 
 
-  def computeRightPanelPose(self):
+  def createRightPanelBox(self):
     """
       z=13+offset
       y=12+offset(x,y)
@@ -289,20 +291,28 @@ class CollisionInterface:
     self.RIGHT_PANEL_CREATED=True
 
 
-  def computeLidPose(self):
+  def createLidBox(self):
     """
       z=13
       y=13+offset(x,y)
       x=13+offset(x,y)
       orientation=?
       size= fixed
-
-      LID AND HANDLE?
     """
+    self.createLidHandleBox()
     self.LID_CREATED=True
 
+  def createLidHandleBox(self):
+    """
+      z=13
+      y=13+offset(x,y)
+      x=13+offset(x,y)
+      orientation=?
+      size= fixed
+    """
 
-  def computeInspectionBoxPose(self):
+
+  def createInspectionBox(self):
     # 12, 13
     """
       z=12
@@ -400,45 +410,46 @@ if __name__ == '__main__':
 """
 scene = moveit_commander.PlanningSceneInterface()
 
-ADD PLANE:
-my_obj=moveit_msgs.msg.CollisionObject()
--> ha piani, forme primitive, sotto-frame,....
-scene.applyCollisionObject(my_obj) NON ESISTE IN PY
-  (MA BANALMENTE X IMPLEMENTARLO BASTA PUBLICARE UN CollisionObject SUL TOPIC GIUSTO,
-    CON operation=ADD, MA ATTENZIONE AL CONTROLLO DI AVER EFFETTICAMENTE COMPLETATO L'AZIONE)
-https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
-MA ESISTE:
-  scene.add_plane(self, name, pose, normal=(0, 0, 1), offset=0):
-        {   # ax + by + cz + d = 0
-
-            # a := coef[0]
-            # b := coef[1]
-            # c := coef[2]
-            # d := coef[3]
-          co = CollisionObject()
-          co.operation = CollisionObject.ADD
-          co.id = name
-          co.header = pose.header
-          p = Plane()
-          p.coef = list(normal)
-          p.coef.append(offset)
-          co.planes = [p]
-          co.plane_poses = [pose.pose]
-          self.__submit(co, attach=False)
-        }
-
-
-ADDING BOX:
 https://ros-planning.github.io/moveit_tutorials/doc/move_group_python_interface/move_group_python_interface_tutorial.html#adding-objects-to-the-planning-scene
 
-box_pose = geometry_msgs.msg.PoseStamped()
-box_pose.header.frame_id = REFERENCE_FRAME
-box_pose.pose.orientation.w = 1.0
-...
-box_pose.pose.position.z = 0.11
-...
-box_name = BOX_NAME
-scene.add_box(box_name, box_pose, size=(0.075, 0.075, 0.075))
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from std_msgs.msg import Header
+
+scene.add_box(
+        name="my_box",
+        pose=PoseStamped(
+              header=Header(frame_id=robot.get_planning_frame()),
+              pose=Pose(
+                     position=Point(x=1.2, y=1 ,z=1),
+                      orientation=Quaternion(x=0, y=0, z=0, w=1)
+        size=(0.1, 0.1, 0.1))
+
+scene.add_plane(
+        name="my_plane",
+        pose=PoseStamped(
+                header=Header(
+                        stamp=rospy.Time.now(), 
+                        frame_id=robot.get_planning_frame()),
+                pose=Pose(
+                        position=Point(x=0, y=0 ,z=0), 
+                        orientation=Quaternion(x=0, y=0, z=0, w=1))),
+        normal=(0,0,1),
+        offset=1)
+  
+        # ax + by + cz + d = 0
+        # a,b,c := *normal
+        # d := offset
+        
+NO scene.applyCollisionObject(my_obj) IN PY
+https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
+  (MA BANALMENTE X IMPLEMENTARLO BASTA PUBLICARE UN CollisionObject SUL TOPIC GIUSTO,
+/collision_object:          moveit_msgs/CollisionObject
+/attached_collision_object:   "             "
+              
+    CON operation=ADD, MA ATTENZIONE AL CONTROLLO DI AVER EFFETTICAMENTE COMPLETATO L'AZIONE)
+my_obj=moveit_msgs.msg.CollisionObject()
+-> ha piani, forme primitive, sotto-frame,....
+
 
 #ENSURE CREATION: if node was just created/dies before completing box won't be created
 #_check_changes_in_lists w/ timeout:
@@ -462,10 +473,5 @@ while (seconds - start < timeout) and not rospy.is_shutdown():
     rospy.sleep(0.1)#
     seconds = rospy.get_time()
 return False#TIMEDOUT
-
-
-/collision_object
-/attached_col...
-moveit_msgs/CollisionObject
 
 """

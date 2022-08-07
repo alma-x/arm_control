@@ -19,5 +19,15 @@ GRIPPER CONTROL
         • semi closed: TCP 192.5 mm, Aperture 35 mm
         • closed: TCP 200 mm, Aperture 0 mm
 
-ERRORS
-- gripper command fails when requests are too close: should wait... actions?
+ERRORS----------------------------------------
+
+MOVEIT
+- gripper command fails when requests are too close (moves from expected position): should wait... actions?
+
+
+CONTROLLER
+- when references are already published but node restarts
+
+[ERROR] [1659864098.022504488, 3823.495000000]: Ignoring transform for child_frame_id "..." from authority "unknown_publisher" because of an invalid quaternion in the transform (0.000000 0.000000 0.000000 0.000000)
+
+...={robot_frame, button_3, button_4}
