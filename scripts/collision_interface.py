@@ -7,7 +7,7 @@ from geometry_msgs.msg import Pose, TransformStamped,PoseStamped
 import geometry_msgs.msg
 import moveit_commander
 import moveit_msgs.msg
-from moveit_msgs.msg import CollisionObject
+# from moveit_msgs.msg import CollisionObject
 import rospy
 import tf2_ros
 from moveit_commander.conversions import pose_to_list
@@ -113,6 +113,9 @@ class CollisionInterface:
     self.RIGHT_PANEL_CREATED=False
     self.LID_CREATED=False
     self.INSPECTION_PANEL_CREATED=False
+    #TODO: check if objects exists at startup
+    #   robustness in case of node death
+    self.checkExistingObjects()
     self.CLEARANCE_SAFETY_COEF=1.05
     self.tf_buffer=tf2_ros.Buffer(cache_time=rospy.Duration(1))
     self.tf_listener=tf2_ros.TransformListener(self.tf_buffer,queue_size=None)
@@ -120,13 +123,18 @@ class CollisionInterface:
     print('ready to create objects')
     self.update_timer=rospy.Timer(TIMER_DURATION,self.updateObjects)
 
+  def checkExistingObjects(self):
+    print('initializing objects states:...')
+    #TODO: which one is the better way?
+    #   1) check existing objects names
+    #      if object_name in self.scene.get_known_object_names() -"_hb"
+    #   2) save over param server
 
   def updateObjects(self,_):
-    known_obj_names=self.scene.get_known_object_names()
-    print(known_obj_names)
+    # known_obj_names=self.scene.get_known_object_names()
+    # print(known_obj_names)
     # print(self.scene.get_object_poses(known_obj_names))
     # print(self.scene.get_objects())
-
     if not self.TABLE_CREATED:
       exists_reference,reference_tf=self.checkObjectReference('table_')
       if exists_reference:
@@ -150,10 +158,10 @@ class CollisionInterface:
     if not all(self.BUTTONS_CREATED):
       for not_created in np.where(np.bitwise_not(self.BUTTONS_CREATED))[0]:
         button_reference="button_"+str(not_created+1)
-        print('creating '+button_reference)
+        # print('creating '+button_reference)
         exists_reference,reference_tf=self.checkObjectReference(button_reference)
         if exists_reference:
-          self.createButtonBox(button_reference)
+          self.createButtonBox(reference_tf)
           self.BUTTONS_CREATED[not_created]=True
 
     if not self.IMU_CREATED:
@@ -230,22 +238,30 @@ class CollisionInterface:
                          size=(self.CLEARANCE_SAFETY_COEF*.0005,
                          self.CLEARANCE_SAFETY_COEF* .3, 
                          self.CLEARANCE_SAFETY_COEF*.5))
-    self.MID_PLANE_CREATED=True
+    self.MID_PANEL_CREATED=True
+
 
   def createButtonBox(self,reference_tf):
-    reference_tf=TransformStamped()
     reference_name=str(reference_tf.child_frame_id)
+    print(reference_name)
     print('creating plane for: '+reference_name) 
     box_pose=PoseStamped()
     box_pose.header=reference_tf.header
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
 
-    self.scene.add_box(reference_name+"_hb", box_pose, 
-                              size=(self.CLEARANCE_SAFETY_COEF*.01,
-                              self.CLEARANCE_SAFETY_COEF* .1, 
-                              self.CLEARANCE_SAFETY_COEF*1))
+    # self.scene.add_box(reference_name+"_hb", box_pose, 
+    #                           size=(self.CLEARANCE_SAFETY_COEF*.023,
+    #                           self.CLEARANCE_SAFETY_COEF* .04, 
+    #                           self.CLEARANCE_SAFETY_COEF*.04))
+    self.scene.add_cylinder(reference_name+"_hb", box_pose, 
+                              height=self.CLEARANCE_SAFETY_COEF*.023,
+                              radius=self.CLEARANCE_SAFETY_COEF* .04/2)
 
 
   def createLeftPanelPlane(self,reference_tf):
@@ -255,6 +271,10 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
 
     self.scene.add_box("left_panel_hb", box_pose, 
                               size=(self.CLEARANCE_SAFETY_COEF*.0005,
@@ -440,16 +460,12 @@ scene.add_plane(
         # a,b,c := *normal
         # d := offset
         
-NO scene.applyCollisionObject(my_obj) IN PY
-https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
-  (MA BANALMENTE X IMPLEMENTARLO BASTA PUBLICARE UN CollisionObject SUL TOPIC GIUSTO,
-/collision_object:          moveit_msgs/CollisionObject
-/attached_collision_object:   "             "
-              
-    CON operation=ADD, MA ATTENZIONE AL CONTROLLO DI AVER EFFETTICAMENTE COMPLETATO L'AZIONE)
-my_obj=moveit_msgs.msg.CollisionObject()
+psi.add_object(moveit_msgs.msg.CollisionObject())
 -> ha piani, forme primitive, sotto-frame,....
 
+https://moveit.picknik.ai/humble/doc/tutorials/planning_around_objects/planning_around_objects.html
+/collision_object:          moveit_msgs/CollisionObject
+/attached_collision_object:   "             "
 
 #ENSURE CREATION: if node was just created/dies before completing box won't be created
 #_check_changes_in_lists w/ timeout:
