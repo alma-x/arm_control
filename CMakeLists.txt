@@ -34,7 +34,6 @@ project(arm_control)
 
  add_service_files(
    FILES
-   DummyMarker.srv
    GripperCommand.srv
    UserInterface.srv
    aruco_service.srv
@@ -46,9 +45,8 @@ project(arm_control)
 
  generate_messages(
    DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
+   std_msgs
    geometry_msgs
-   #geometry_msgs/PoseStamped
  )
 
  catkin_package(
@@ -76,7 +74,8 @@ target_link_libraries(bridge ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(ERC ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(prova_cpp ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
- catkin_install_python(PROGRAMS
+ catkin_install_python(
+  PROGRAMS
    scripts/UI_gara.py
    scripts/collision_interface.py
    scripts/solve_equation.py

@@ -3,7 +3,8 @@ import copy
 import sys
 from math import pi
 import numpy as np
-from geometry_msgs.msg import Pose, TransformStamped,PoseStamped
+from geometry_msgs.msg import Quaternion,Point,Pose,PoseStamped
+from std_msgs.msg import String,Header
 import geometry_msgs.msg
 import moveit_commander
 import moveit_msgs.msg
@@ -11,10 +12,8 @@ import moveit_msgs.msg
 import rospy
 import tf2_ros
 from moveit_commander.conversions import pose_to_list
-from std_msgs.msg import String
 from arm_control.srv import collision_object_srv, collision_object_srvRequest,\
-                             collision_object_srvResponse, DummyMarker
-
+                             collision_object_srvResponse
 
 
 def callback_service(req):
@@ -62,31 +61,12 @@ def all_close(goal, actual, tolerance):
   return True
 
 
-class MoveGroupPythonIntefaceTutorial(object):
-  """MoveGroupPythonIntefaceTutorial"""
-  def __init__(self):
-    super(MoveGroupPythonIntefaceTutorial, self).__init__()
 
-    moveit_commander.roscpp_initialize(sys.argv)
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
-    group_name = "manipulator"
-    move_group = moveit_commander.MoveGroupCommander(group_name)
-    display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                   moveit_msgs.msg.DisplayTrajectory,
-                                                   queue_size=20)
-    planning_frame = move_group.get_planning_frame()
-    eef_link = move_group.get_end_effector_link()
-    group_names = robot.get_group_names()
 
-    self.box_name = ''
-    self.robot = robot
-    self.scene = scene
-    self.move_group = move_group
-    self.display_trajectory_publisher = display_trajectory_publisher
-    self.planning_frame = planning_frame
-    self.eef_link = eef_link
-    self.group_names = group_names
+
+
+
+
 
 MAX_MID_PANEL_ARUCO_ID=4
 # MAX_MID_PANEL_ARUCO_ID=9
@@ -95,16 +75,6 @@ MAX_MID_PANEL_ARUCO_ID=4
 #     self.name=""
 #     self.pose=Pose()
 #     self.size=[]
-
-
-
-
-
-
-
-
-
-
 
 
 class CollisionInterface:
@@ -118,6 +88,7 @@ class CollisionInterface:
     # planning_frame=self.move_group.get_planning_frame()#:world==base_link
     # pose_reference_frame=self.move_group.get_pose_reference_frame()#:world==base_link
     self.BASE_FRAME="base_link"
+    self.ee_link=self.move_group.get_end_effector_link()
     self.TABLE_CREATED=False
     self.ROBOT_FRAME_CREATED=False
     self.MID_PANEL_CREATED=False
@@ -126,6 +97,7 @@ class CollisionInterface:
     self.IMU_CREATED=False
     self.RIGHT_PANEL_CREATED=False
     self.LID_CREATED=False
+    self.LID_HANDLE_CREATED=False
     self.INSPECTION_PANEL_CREATED=False
     #TODO: check if objects exists at startup
     #   robustness in case of node death
@@ -136,6 +108,9 @@ class CollisionInterface:
     TIMER_DURATION=rospy.Duration(secs=1)
     print('ready to create objects')
     self.update_timer=rospy.Timer(TIMER_DURATION,self.updateObjects)
+    #COLLISION SERVER FOR ATTACH/DETACH REQUESTS
+    # rospy.Service('collision_server', collision_object_srv, callback_service)
+  
 
   def checkExistingObjects(self):
     print('initializing objects states:...')
@@ -143,6 +118,7 @@ class CollisionInterface:
     #   1) check existing objects names
     #      if object_name in self.scene.get_known_object_names() -"_hb"
     #   2) save over param server
+
 
   def updateObjects(self,_):
     # known_obj_names=self.scene.get_known_object_names()
@@ -183,21 +159,27 @@ class CollisionInterface:
       if exists_reference:
         self.createImuBox(reference_tf)
 
-    # if not self.RIGHT_PANEL_CREATED  and exists_base():
-    #   RIGHT_PANEL_POSES=[arucoInquiriesClient(id) for id in self.RIGHT_PANEL_MARKERS]
-    #   if all([pose.found for pose in RIGHT_PANEL_POSES]):
-    #     self.computeRightPanelPose([pose.pose for pose in RIGHT_PANEL_POSES])
+    if not self.RIGHT_PANEL_CREATED:
+      exists_reference,reference_tf=self.checkObjectReference("right_panel")
+      if exists_reference:
+        self.createRightPanelPlane(reference_tf)
 
-    # if not self.LID_CREATED:
-    #   LID_POSES=[arucoInquiriesClient(id) for id in self.LID_MARKERS]
-    #   if all([pose.found for pose in LID_POSES]):
-    #     self.computeLidPose([pose.pose for pose in LID_POSES])
+    if not self.LID_CREATED:
+      exists_reference,reference_tf=self.checkObjectReference("lid_")
+      if exists_reference:
+        self.createLidBox(reference_tf)
 
-    # if not self.INSPECTION_PANEL_CREATED:
-    #   INSPECTION_PANEL_POSES=[arucoInquiriesClient(id) for id in self.INSPECTION_PANEL_MARKERS]
-    #   if all([pose.found for pose in INSPECTION_PANEL_POSES]):
-    #     self.computeInspectionBoxPose([pose.pose for pose in INSPECTION_PANEL_POSES])
+    if not self.LID_HANDLE_CREATED:
+      exists_reference,reference_tf=self.checkObjectReference("lid_handle")
+      if exists_reference:
+        self.createLidHandleBox(reference_tf)
 
+    if not self.INSPECTION_PANEL_CREATED:
+      exists_reference,reference_tf=self.checkObjectReference("inspection_panel")
+      if exists_reference:
+        self.createInspectionPanelBox(reference_tf)
+
+      
   def checkObjectReference(self,target_frame):
     global tf_buffer
     check_timeout=0
@@ -210,6 +192,7 @@ class CollisionInterface:
         finally:
           check_timeout+=1
           if check_timeout>50: return False,None
+
 
   def createTablePlane(self,reference_tf):
     print('creating plane for: '+'table_') 
@@ -229,6 +212,11 @@ class CollisionInterface:
                 self.CLEARANCE_SAFETY_COEF*.0005))
     
     self.TABLE_CREATED=True
+    #TODO: consider modify self.X_CREATED outside and return wait_for_...
+    # self.TABLE_CREATED=self.wait_for_state_update(box_is_attached=True,
+    #                                               box_is_known=False,
+    #                                               timeout=10)
+
 
   def createRobotFrameBox(self,reference_tf):
     print('creating box for: '+'robot_frame') 
@@ -248,6 +236,7 @@ class CollisionInterface:
                         self.CLEARANCE_SAFETY_COEF*.15))
     self.ROBOT_FRAME_CREATED=True
 
+
   def createMidPanelPlane(self,reference_tf):
     print('creating plane for: '+'mid_panel') 
     box_pose=PoseStamped()
@@ -259,7 +248,6 @@ class CollisionInterface:
     box_pose.pose.orientation.y=reference_tf.transform.rotation.y
     box_pose.pose.orientation.z=reference_tf.transform.rotation.z
     box_pose.pose.orientation.w=reference_tf.transform.rotation.w
-
     self.scene.add_box("mid_panel_hb", box_pose,
                          size=(self.CLEARANCE_SAFETY_COEF*.3,
                          self.CLEARANCE_SAFETY_COEF* .5, 
@@ -310,16 +298,13 @@ class CollisionInterface:
 
 
   def createImuBox(self,reference_tf):
-    print('creating plane for: '+'imu_') 
+    print('creating box for: '+'imu_') 
     box_pose=PoseStamped()
     box_pose.header=reference_tf.header
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
-    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
-    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
-    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
-    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
+    box_pose.pose.orientation.w=1
 
     self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF* .05,
@@ -330,65 +315,87 @@ class CollisionInterface:
 
 
 
-  def createRightPanelBox(self):
-    """
-      z=13+offset
-      y=12+offset(x,y)
-      x=12+offset(x,y)
-      orientation=12 (13)
-      size= fixed
-    """
+  def createRightPanelPlane(self,reference_tf):
+    print('creating plane for: '+'right_panel') 
+    self.scene.add_box(name="right_panel_hb",
+                        pose=PoseStamped(
+                          header=reference_tf.header,
+                          pose=Pose(
+                            position=Point(
+                              x=reference_tf.transform.translation.x,
+                              y=reference_tf.transform.translation.y,
+                              z=reference_tf.transform.translation.z),
+                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+                        size=(self.CLEARANCE_SAFETY_COEF*.0005,
+                              self.CLEARANCE_SAFETY_COEF*.25,
+                              self.CLEARANCE_SAFETY_COEF*.18))
     self.RIGHT_PANEL_CREATED=True
 
 
-  def createLidBox(self):
-    """
-      z=13
-      y=13+offset(x,y)
-      x=13+offset(x,y)
-      orientation=?
-      size= fixed
-    """
-    self.createLidHandleBox()
+  def createLidBox(self,reference_tf):
+    print('creating box for: '+'lid_') 
+    self.scene.add_box(name="lid_hb",
+                        pose=PoseStamped(
+                          header=reference_tf.header,
+                          pose=Pose(
+                            position=Point(
+                              x=reference_tf.transform.translation.x,
+                              y=reference_tf.transform.translation.y,
+                              z=reference_tf.transform.translation.z),
+                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+                        size=(self.CLEARANCE_SAFETY_COEF*.0996,
+                              self.CLEARANCE_SAFETY_COEF*.1496,
+                              self.CLEARANCE_SAFETY_COEF*.004))
     self.LID_CREATED=True
 
-  def createLidHandleBox(self):
-    """
-      z=13
-      y=13+offset(x,y)
-      x=13+offset(x,y)
-      orientation=?
-      size= fixed
-    """
+
+  def createLidHandleBox(self,reference_tf):
+    print('creating box for: '+'lid_handle') 
+    self.scene.add_box(name="lid_handle_hb",
+                        pose=PoseStamped(
+                          header=reference_tf.header,
+                          pose=Pose(
+                            position=Point(
+                              x=reference_tf.transform.translation.x,
+                              y=reference_tf.transform.translation.y,
+                              z=reference_tf.transform.translation.z),
+                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+                        size=(self.CLEARANCE_SAFETY_COEF*.035,
+                              self.CLEARANCE_SAFETY_COEF*.035,
+                              self.CLEARANCE_SAFETY_COEF*.035))
+    self.LID_HANDLE_CREATED=True
 
 
-  def createInspectionBox(self):
-    # 12, 13
-    """
-      z=12
-      y=average(13+offset(x,y), 12+offset(x,y))
-      x=average(13+offset(x,y), 12+offset(x,y))
-      orientation=?
-      size= using arucos + offsets
-    """
+  def createInspectionPanelBox(self,reference_tf):
+    print('creating box for: '+'inspection_box') 
+    self.scene.add_box(name="inspection_box_hb",
+                        pose=PoseStamped(
+                          header=reference_tf.header,
+                          pose=Pose(
+                            position=Point(
+                              x=reference_tf.transform.translation.x,
+                              y=reference_tf.transform.translation.y,
+                              z=reference_tf.transform.translation.z),
+                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+                        size=(self.CLEARANCE_SAFETY_COEF*.1,
+                              self.CLEARANCE_SAFETY_COEF*.15,
+                              self.CLEARANCE_SAFETY_COEF*.05))
     self.INSPECTION_PANEL_CREATED=True
 
 
-
   def wait_for_state_update(self, box_is_known=False, box_is_attached=False, timeout=4):
+    #TODO: get names somehow: args, self.vars
     box_name = self.box_name
     scene = self.scene
     start = rospy.get_time()
     seconds = rospy.get_time()
     while (seconds - start < timeout) and not rospy.is_shutdown():
-      # Test if the box is in attached objects
-      attached_objects = scene.get_attached_objects([box_name])
-      is_attached = len(attached_objects.keys()) > 0
-      # Test if the box is in the scene.
+      #test attachement
+      is_attached = len(scene.get_attached_objects([box_name]).keys()) > 0
+      #test existence
       # Note that attaching the box will remove it from known_objects
       is_known = box_name in scene.get_known_object_names()
-
-      # Test if we are in the expected state
+      # Test expected state
       if (box_is_attached == is_attached) and (box_is_known == is_known):
         return True
       rospy.sleep(0.1)
@@ -396,63 +403,29 @@ class CollisionInterface:
     return False
 
 
-  def add_box(self,box_pose,box_name,box_size, timeout=4):
-    #box_name = self.box_name
-    scene = self.scene
-    #box_pose = geometry_msgs.msg.PoseStamped()
-    #box_pose.header.frame_id = "base_link"
-    #box_pose.pose.orientation.w = 1.0
-    #box_pose.pose.position.x = -0.1 # slightly above the end effector
-    #box_name = "box"
-    size=(box_size[0],box_size[1],box_size[2])
-    scene.add_box(box_name, box_pose, size)
-    self.box_name=box_name
-    return self.wait_for_state_update(box_is_known=True, timeout=timeout)
-
-
   def attach_box(self,box_pose,box_name,box_size, timeout=4):
-    robot = self.robot
-    scene = self.scene
-    eef_link = self.eef_link
-    group_names = self.group_names
-    grasping_group = 'manipulator'
-    #touch_links = robot.get_link_names()
-    touch_links=['wrist_3_link', 'ee_link', 'tool0', 'camera_ur_mount', 'camera_link1', 'camera_link', 'camera_camera_lens', 'camera_camera', 'camera_camera_gazebo', 'robotiq_arg2f_base_link', 'left_outer_knuckle', 'left_outer_finger', 'left_inner_finger', 'left_finger_tip_temp', 'left_finger_tip', 'left_inner_finger2', 'left_inner_knuckle', 'left_inner_knuckle2', 'plate1', 'dys_middle', 'right_inner_knuckle', 'right_inner_knuckle2', 'right_outer_knuckle', 'right_outer_finger', 'right_inner_finger', 'right_finger_tip_temp', 'right_finger_tip', 'right_inner_finger2']
-    scene.attach_box(eef_link, box_name, touch_links=touch_links)
+    touch_links = self.robot.get_link_names()
+    self.scene.attach_box(self.eef_link, box_name, touch_links=touch_links)
     return self.wait_for_state_update(box_is_attached=True, box_is_known=False, timeout=timeout)
 
 
   def detach_box(self,box_pose,box_name,box_size, timeout=4):
-    scene = self.scene
     eef_link = self.eef_link
-    scene.remove_attached_object(eef_link, name=box_name)
+    self.scene.remove_attached_object(self.eef_link, name=box_name)
     return self.wait_for_state_update(box_is_known=True, box_is_attached=False, timeout=timeout)
 
 
   def remove_box(self,box_name,timeout=4):
-    #box_name = self.box_name
-    scene = self.scene
-    scene.remove_world_object(box_name)
+    self.scene.remove_world_object(box_name)
     return self.wait_for_state_update(box_is_attached=False, box_is_known=False, timeout=timeout)
 
 
-
-
-
-def collisionInterface():
-  #COLLISION SERVER FOR ATTACH/DETACH REQUESTS
-  rospy.Service('collision_server', collision_object_srv, callback_service)
-  #ARUCO INQUIRER SERVICE to simplify the check over found arucos...
-  # rospy.Service()
-
+#-------------------------------------------------------------------
 if __name__ == '__main__':
   node_name="collision_interface"
   rospy.init_node(node_name,anonymous=False)
   moveit_commander.roscpp_initialize(sys.argv)
-  # collisionInterface()
   collisor=CollisionInterface()
-
-
   try:
     rospy.spin()
   except rospy.ROSInterruptException or KeyboardInterrupt:

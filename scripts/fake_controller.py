@@ -8,12 +8,13 @@ import tf2_ros
 from tf.transformations import quaternion_inverse
 from geometry_msgs.msg import TransformStamped
 from arm_vision.msg import FoundArucos
-from arm_control.srv import DummyMarker,GripperCommand
+from arm_control.srv import GripperCommand
+from arm_vision.srv import FoundMarker,ReferenceAcquisition
 import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
-from math import pi
-from std_msgs.msg import String
+from math import pi as PI
+from std_msgs.msg import String,Empty
 from moveit_commander.conversions import pose_to_list
 
 
@@ -24,7 +25,6 @@ from moveit_commander.robot import RobotCommander
 import moveit_msgs.msg
 import geometry_msgs.msg
 import moveit_commander
-import sys
 import copy
 
 
@@ -300,8 +300,9 @@ my_move_group=MyMoveGroup()
 
 exit_request=False
 
-inquiries_service='aruco_inquiries'
+INQUIRIES_SERVICE='aruco_inquiries'
 GRIPPER_SERVICE='gripper_commands'
+REFERENCES_SERVICE='references'
 
 requested_objective=rospy.set_param("/objective",0)
 
@@ -312,11 +313,12 @@ HOME_POSITION=[0,-120,100,20,90,-90]
 def grad_to_rad(angle):
     return angle*3.1415/180
 
+#TODO: change it with existing reference and objects
 def arucoInquiriesClient(id):
-    rospy.wait_for_service(inquiries_service)
+    rospy.wait_for_service(INQUIRIES_SERVICE)
 
     try:
-        inquirer=rospy.ServiceProxy(inquiries_service,DummyMarker)
+        inquirer=rospy.ServiceProxy(INQUIRIES_SERVICE,FoundMarker)
         inquiry_result=inquirer(id)
 
         if not inquiry_result.found:
@@ -327,6 +329,18 @@ def arucoInquiriesClient(id):
         
 
     except rospy.ServiceException as e:
+        print("Service call failed: %s"%e)
+
+
+def referencesClient():
+    rospy.wait_for_service(REFERENCES_SERVICE)
+    while True:
+      try:
+        referencer=rospy.ServiceProxy(INQUIRIES_SERVICE,ReferenceAcquisition)
+        reference_result=referencer(Empty())
+        if reference_result.done:
+          break
+      except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
 
@@ -386,6 +400,7 @@ def markersInspection():
   wpose = group.get_current_pose().pose
   wpose.position.x -= 0.2
   my_move_group.go_to_pose_cartesian(wpose)
+  referencesClient()
   #rotation to imu
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[0]+=grad_to_rad(40)
@@ -393,24 +408,29 @@ def markersInspection():
   joint_vet[2]+=grad_to_rad(10)
   joint_vet[3]+=grad_to_rad(20)
   my_move_group.go_to_joint_state(joint_vet)
+  referencesClient()
   #rising to imu panel
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[2]-=grad_to_rad(25)
   joint_vet[3]-=grad_to_rad(25)
   my_move_group.go_to_joint_state(joint_vet)
+  referencesClient()
   #framing main panel
   wpose = group.get_current_pose().pose
   wpose.position.x -= 0.1
   my_move_group.go_to_pose_cartesian(wpose)
+  referencesClient()
   #rotation to inspection panel
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[0]-=grad_to_rad(95)
   my_move_group.go_to_joint_state(joint_vet)
+  referencesClient()
   #descending to panel storage
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[2]+=grad_to_rad(25)
   joint_vet[3]+=grad_to_rad(25)
   my_move_group.go_to_joint_state(joint_vet)
+  referencesClient()
   #TODO: REPEAT WITH INCREASED MOTION IF NOT EVERYTHING HAS BEEN FOUND
 
 
@@ -444,12 +464,14 @@ def actuationOfButtons(buttons_ids):
         pressButton(button_id)      
 
 
+
+
 def sensorPickup():
     print('picking up IMU module')
 
 
-def sensorPositioning(angle):
-    # angle=args.angle
+def sensorPositioning():
+    angle=rospy.get_param('/imu_angle')
     print('positioning imu with angle: {}'.format(angle))
 
 
@@ -470,8 +492,8 @@ def panelClosing():
     print('closing inspection panel')
 
 
-def secretButton(secret_id):
-    # secret_id=args.id
+def secretButton():
+    secret_id=rospy.get_param('/secret_id')
     print('pressing button: {}'.format(secret_id))
 
 
@@ -522,19 +544,19 @@ def fakeController():
       try:
         # requested_objective=input('current objective: {}\n select: '.format(current_objective))
         requested_objective=rospy.get_param("/objective")
+        print("######\n {} \n####".format(type(requested_objective)))
         
         if current_objective!=requested_objective:
           current_objective=requested_objective
+          # objectives_to_actions[requested_objective]
           if current_objective==1:
               markersInspection()
           elif current_objective==2:
-              buttons_sequence=rospy.get_param('/buttons_sequence').split()
-              actuationOfButtons(buttons_sequence)
+              actuationOfButtons()
           elif current_objective==3:
               sensorPickup()
           elif current_objective==4:
-              angle=rospy.get_param('/imu_angle')
-              sensorPositioning(angle)
+              sensorPositioning()
           elif current_objective==5:
               panelOpening()
           elif current_objective==6:
@@ -544,8 +566,7 @@ def fakeController():
           elif current_objective==8:
               panelClosing()
           elif current_objective==9:
-              secret_id=rospy.get_param('/secret_id')
-              secretButton(secret_id)
+              secretButton()
           elif current_objective==10:
               homePositioning()
           else:
@@ -554,13 +575,6 @@ def fakeController():
         rospy.rostime.wallsleep(0.5)
       except KeyboardInterrupt or rospy.ROSInterruptException:
             rospy.signal_shutdown()
-
-
-
-
-    # input_id=input('select number id: ')
-
-    # arucoInquiriesClient(int(input_id))
 
     
 ###########################################################
