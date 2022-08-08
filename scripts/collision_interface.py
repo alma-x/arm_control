@@ -305,27 +305,34 @@ class CollisionInterface:
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
     box_pose.pose.orientation.w=1
-
     self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF* .05,
                         self.CLEARANCE_SAFETY_COEF* .1, 
                         self.CLEARANCE_SAFETY_COEF* .05))
-    
     self.IMU_CREATED=True
-
 
 
   def createRightPanelPlane(self,reference_tf):
     print('creating plane for: '+'right_panel') 
-    self.scene.add_box(name="right_panel_hb",
-                        pose=PoseStamped(
-                          header=reference_tf.header,
-                          pose=Pose(
-                            position=Point(
-                              x=reference_tf.transform.translation.x,
-                              y=reference_tf.transform.translation.y,
-                              z=reference_tf.transform.translation.z),
-                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    # self.scene.add_box(name="right_panel_hb",
+    #                     pose=PoseStamped(
+    #                       header=reference_tf.header,
+    #                       pose=Pose(
+    #                         position=Point(
+    #                           x=reference_tf.transform.translation.x,
+    #                           y=reference_tf.transform.translation.y,
+    #                           z=reference_tf.transform.translation.z),
+    #                         orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    #                     size=(self.CLEARANCE_SAFETY_COEF*.0005,
+    #                           self.CLEARANCE_SAFETY_COEF*.25,
+    #                           self.CLEARANCE_SAFETY_COEF*.18))
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.w=1
+    self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF*.0005,
                               self.CLEARANCE_SAFETY_COEF*.25,
                               self.CLEARANCE_SAFETY_COEF*.18))
@@ -334,15 +341,25 @@ class CollisionInterface:
 
   def createLidBox(self,reference_tf):
     print('creating box for: '+'lid_') 
-    self.scene.add_box(name="lid_hb",
-                        pose=PoseStamped(
-                          header=reference_tf.header,
-                          pose=Pose(
-                            position=Point(
-                              x=reference_tf.transform.translation.x,
-                              y=reference_tf.transform.translation.y,
-                              z=reference_tf.transform.translation.z),
-                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    # self.scene.add_box(name="lid_hb",
+    #                     pose=PoseStamped(
+    #                       header=reference_tf.header,
+    #                       pose=Pose(
+    #                         position=Point(
+    #                           x=reference_tf.transform.translation.x,
+    #                           y=reference_tf.transform.translation.y,
+    #                           z=reference_tf.transform.translation.z),
+    #                         orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    #                     size=(self.CLEARANCE_SAFETY_COEF*.0996,
+    #                           self.CLEARANCE_SAFETY_COEF*.1496,
+    #                           self.CLEARANCE_SAFETY_COEF*.004))
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.w=1
+    self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF*.0996,
                               self.CLEARANCE_SAFETY_COEF*.1496,
                               self.CLEARANCE_SAFETY_COEF*.004))
@@ -351,15 +368,25 @@ class CollisionInterface:
 
   def createLidHandleBox(self,reference_tf):
     print('creating box for: '+'lid_handle') 
-    self.scene.add_box(name="lid_handle_hb",
-                        pose=PoseStamped(
-                          header=reference_tf.header,
-                          pose=Pose(
-                            position=Point(
-                              x=reference_tf.transform.translation.x,
-                              y=reference_tf.transform.translation.y,
-                              z=reference_tf.transform.translation.z),
-                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    # self.scene.add_box(name="lid_handle_hb",
+    #                     pose=PoseStamped(
+    #                       header=reference_tf.header,
+    #                       pose=Pose(
+    #                         position=Point(
+    #                           x=reference_tf.transform.translation.x,
+    #                           y=reference_tf.transform.translation.y,
+    #                           z=reference_tf.transform.translation.z),
+    #                         orientation=Quaternion(x=0, y=0, z=0, w=1))),
+    #                     size=(self.CLEARANCE_SAFETY_COEF*.035,
+    #                           self.CLEARANCE_SAFETY_COEF*.035,
+    #                           self.CLEARANCE_SAFETY_COEF*.035))
+    box_pose=PoseStamped()
+    box_pose.header=reference_tf.header
+    box_pose.pose.position.x=reference_tf.transform.translation.x
+    box_pose.pose.position.y=reference_tf.transform.translation.y
+    box_pose.pose.position.z=reference_tf.transform.translation.z
+    box_pose.pose.orientation.w=1
+    self.scene.add_box("imu_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF*.035,
                               self.CLEARANCE_SAFETY_COEF*.035,
                               self.CLEARANCE_SAFETY_COEF*.035))

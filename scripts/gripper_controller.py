@@ -38,6 +38,7 @@ def gripperCommandServer(command_req):
         gripper_pub.publish(gripper_msg)
     else:
         print("wrong state requested!\n")
+    #TODO: is it correct or should i use the response.field?
     return True
 
 def changeTCP():

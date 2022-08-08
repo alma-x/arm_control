@@ -11,7 +11,7 @@ from arm_vision.msg import FoundArucos
 from arm_control.srv import GripperCommand
 from arm_vision.srv import FoundMarker,ReferenceAcquisition
 import moveit_commander
-import moveit_msgs.msg
+import moveit_msgs.msg  
 import geometry_msgs.msg
 from math import pi as PI
 from std_msgs.msg import String,Empty
@@ -94,11 +94,13 @@ class MyMoveGroup(object):
 
     return True
 
+
   def ruota_giunto(self,id_giunto,angle):
     joints=self.get_joints_values()
     joints[id_giunto]=joints[id_giunto]+angle
-    
     self.go_to_joint_state(joints)
+
+
   def go_to_joint_state(self,joints_vet):
     move_group = self.move_group
 
@@ -304,40 +306,37 @@ INQUIRIES_SERVICE='aruco_inquiries'
 GRIPPER_SERVICE='gripper_commands'
 REFERENCES_SERVICE='references'
 
+HOME_POSITION=[0,-120,100,20,90,-90]
 requested_objective=rospy.set_param("/objective",0)
-
 secret_id=0
 
-HOME_POSITION=[0,-120,100,20,90,-90]
 
 def grad_to_rad(angle):
     return angle*3.1415/180
 
+
 #TODO: change it with existing reference and objects
 def arucoInquiriesClient(id):
     rospy.wait_for_service(INQUIRIES_SERVICE)
-
     try:
         inquirer=rospy.ServiceProxy(INQUIRIES_SERVICE,FoundMarker)
         inquiry_result=inquirer(id)
-
         if not inquiry_result.found:
           print('not found yet')
         else:
           print('found')
         return inquiry_result
-        
-
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
 
-def referencesClient():
+def referencesClient(permission_timeout=2):
     rospy.wait_for_service(REFERENCES_SERVICE)
+    permission_timeout=int(permission_timeout)
     while True:
       try:
-        referencer=rospy.ServiceProxy(INQUIRIES_SERVICE,ReferenceAcquisition)
-        reference_result=referencer(Empty())
+        referencer=rospy.ServiceProxy(REFERENCES_SERVICE,ReferenceAcquisition)
+        reference_result=referencer(permission_timeout)
         if reference_result.done:
           break
       except rospy.ServiceException as e:
@@ -419,7 +418,6 @@ def markersInspection():
   wpose = group.get_current_pose().pose
   wpose.position.x -= 0.1
   my_move_group.go_to_pose_cartesian(wpose)
-  referencesClient()
   #rotation to inspection panel
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[0]-=grad_to_rad(95)
@@ -543,8 +541,7 @@ def fakeController():
 
       try:
         # requested_objective=input('current objective: {}\n select: '.format(current_objective))
-        requested_objective=rospy.get_param("/objective")
-        print("######\n {} \n####".format(type(requested_objective)))
+        requested_objective=rospy.get_param("/objective")#type: int
         
         if current_objective!=requested_objective:
           current_objective=requested_objective
