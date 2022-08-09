@@ -350,54 +350,6 @@ def referencesClient(permission_timeout=3):
         print("Service call failed: %s"%e)
 
 
-def pressButton(button_id):
-    print('pressing button: {}'.format(button_id))
-    answer=arucoInquiriesClient(int(button_id))
-    if answer.found:
-
-      SAFETY_X=0.05
-      SAFETY_Y=0
-      SAFETY_Z=0
-
-      MARKER_BUTTON_Z_DIST=0.03+0.05/2
-
-
-      current_pose = group.get_current_pose().pose
-      button_pose=answer.pose
-      target_pose=current_pose
-
-      # delta_x=button_pose.position.x-current_pose.position.x
-      # # >0 move forward +, <0 move backward -
-      # delta_y=button_pose.position.y-current_pose.position.y
-      # # >0 move right -, <0 move left +
-      # delta_z=button_pose.position.z-current_pose.position.z
-      # #>0 move up +, <0 move down -
-      # target_pose.position.x+=delta_x-SAFETY_X
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-      # target_pose.position.y-=delta_y+SAFETY_Y
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-      # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-      
-      delta_x=0.19
-      delta_y=-0.05
-      delta_z=0.05
-
-      # target_pose.position.x+=delta_x-SAFETY_X
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-      # target_pose.position.y-=delta_y+SAFETY_Y
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-      # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
-      # target_pose.orientation=current_pose.orientation
-      # my_move_group.go_to_pose_cartesian(button_pose)
-
-
-
 def markersInspection(precision_parameter=0):
   print('workspace exploration')
   group_name="manipulator"
@@ -456,8 +408,8 @@ def gripperCommandClient(gripper_state):
     print("Service call failed: %s"%e)
 
 
-def actuationOfButtons(buttons_ids):
-    # buttons_ids=args.ids
+def actuationOfButtons():
+    buttons_ids=rospy.get_param('/buttons_sequence')
 
     #TODO: since apparently presence of class(es) breaks ability to pub/sub
     #imma send a service request to a relay node, w/out classes
@@ -471,8 +423,59 @@ def actuationOfButtons(buttons_ids):
     homePositioning()
 
     print('pressing buttons sequence: {}'.format(buttons_ids))
-    for button_id in buttons_ids:
-        pressButton(button_id)      
+    # for button_id in buttons_ids.split():
+    #     pressButton(button_id)
+    [pressButton(button_id) for partial in buttons_ids.split()
+     for button_id in partial.split(',') 
+     if not (button_id=='' or button_id==',')]
+
+
+
+def pressButton(button_id):
+    print('pressing button: {}'.format(button_id))
+    # answer=arucoInquiriesClient(int(button_id))
+    # if answer.found:
+
+    #   SAFETY_X=0.05
+    #   SAFETY_Y=0
+    #   SAFETY_Z=0
+
+    #   MARKER_BUTTON_Z_DIST=0.03+0.05/2
+
+
+    #   current_pose = group.get_current_pose().pose
+    #   button_pose=answer.pose
+    #   target_pose=current_pose
+
+    #   # delta_x=button_pose.position.x-current_pose.position.x
+    #   # # >0 move forward +, <0 move backward -
+    #   # delta_y=button_pose.position.y-current_pose.position.y
+    #   # # >0 move right -, <0 move left +
+    #   # delta_z=button_pose.position.z-current_pose.position.z
+    #   # #>0 move up +, <0 move down -
+    #   # target_pose.position.x+=delta_x-SAFETY_X
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
+    #   # target_pose.position.y-=delta_y+SAFETY_Y
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
+    #   # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
+      
+    #   delta_x=0.19
+    #   delta_y=-0.05
+    #   delta_z=0.05
+
+    #   # target_pose.position.x+=delta_x-SAFETY_X
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
+    #   # target_pose.position.y-=delta_y+SAFETY_Y
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
+    #   # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
+    #   # target_pose.orientation=current_pose.orientation
+    #   # my_move_group.go_to_pose_cartesian(button_pose)
 
 
 
@@ -613,4 +616,23 @@ https://ros-planning.github.io/moveit_tutorials/doc/move_group_python_interface/
 https://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/move_group_python_interface/move_group_python_interface_tutorial.html
 
 https://ros-planning.github.io/moveit_tutorials/
+
+
+
+PICK N PLACE
+
+gazebo_msgs.msg import ModelState
+
+PUBLISER_TOPIC="/gazebo/set_model_state",
+
+
+
+  gazebo_model_state_pub = rospy.Publisher(PUBLISHER_TOPIC,ModelState)
+  REFERENCE_FRAME="wrist_3_link"
+  model_state=ModelState(model_name=MODEL_NAME,
+                        pose=Pose(position=POSITION,orientation=ORIENTATION)
+                        reference_frame=REFERENCE_FRAME)
+                        
+  gazebo_model_state_pub.publish(model_state)
+  
 """

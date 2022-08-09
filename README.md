@@ -19,6 +19,12 @@ GRIPPER CONTROL
         • semi closed: TCP 192.5 mm, Aperture 35 mm
         • closed: TCP 200 mm, Aperture 0 mm
 
+- refuse a request for the state gripper is already in (& suppress printing)
+
+COLLISION INTERFACE:
+- add hitbox for gripper's cable block
+
+
 ERRORS----------------------------------------
 
 MOVEIT

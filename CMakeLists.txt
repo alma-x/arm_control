@@ -29,7 +29,6 @@ project(arm_control)
 
  add_message_files(
    FILES
-   cv_to_bridge.msg
  )
 
  add_service_files(
@@ -64,22 +63,17 @@ include_directories(
 
 add_executable(bridge src/bridge.cpp)
 add_executable(ERC src/ERC.cpp)
-add_executable(prova_cpp src/prova_cpp.cpp)
 
 add_dependencies(bridge ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-add_dependencies(prova_cpp ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 add_dependencies(ERC ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 target_link_libraries(bridge ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(ERC ${catkin_LIBRARIES} ${Boost_LIBRARIES})
-target_link_libraries(prova_cpp ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
  catkin_install_python(
   PROGRAMS
    scripts/UI_gara.py
    scripts/collision_interface.py
-   scripts/solve_equation.py
-   scripts/control_py
    scripts/fake_controller.py
    scripts/gripper_controller.py
    QT/user_interface.py
@@ -87,7 +81,7 @@ target_link_libraries(prova_cpp ${catkin_LIBRARIES} ${Boost_LIBRARIES})
  )
 
 
-install(TARGETS prova_cpp DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# install(TARGETS  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
