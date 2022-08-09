@@ -306,13 +306,19 @@ INQUIRIES_SERVICE='aruco_inquiries'
 GRIPPER_SERVICE='gripper_commands'
 REFERENCES_SERVICE='references'
 
+#TODO: use this to check if exploration was 100% successfull
+#  must use referencing/objects because aruco always successfully found...
+#   maybe it will be better to give the referencing providing ability to aruco_detector?
+#   since sometimes the current method does not work
+EVERYTHING_FOUND=True
+
 HOME_POSITION=[0,-120,100,20,90,-90]
 requested_objective=rospy.set_param("/objective",0)
 secret_id=0
 
 
 def grad_to_rad(angle):
-    return angle*3.1415/180
+    return angle*PI/180
 
 
 #TODO: change it with existing reference and objects
@@ -330,9 +336,10 @@ def arucoInquiriesClient(id):
         print("Service call failed: %s"%e)
 
 
-def referencesClient(permission_timeout=2):
+def referencesClient(permission_timeout=3):
     rospy.wait_for_service(REFERENCES_SERVICE)
     permission_timeout=int(permission_timeout)
+    print("starting referencing service in {} seconds".format(permission_timeout))
     while True:
       try:
         referencer=rospy.ServiceProxy(REFERENCES_SERVICE,ReferenceAcquisition)
@@ -391,7 +398,7 @@ def pressButton(button_id):
 
 
 
-def markersInspection():
+def markersInspection(precision_parameter=0):
   print('workspace exploration')
   group_name="manipulator"
   group=moveit_commander.MoveGroupCommander(group_name)
@@ -410,26 +417,32 @@ def markersInspection():
   referencesClient()
   #rising to imu panel
   joint_vet=my_move_group.move_group.get_current_joint_values()
-  joint_vet[2]-=grad_to_rad(25)
-  joint_vet[3]-=grad_to_rad(25)
+  joint_vet[2]-=grad_to_rad(30)#25
+  joint_vet[3]-=grad_to_rad(30)#25
   my_move_group.go_to_joint_state(joint_vet)
-  referencesClient()
+  referencesClient()############
   #framing main panel
   wpose = group.get_current_pose().pose
   wpose.position.x -= 0.1
   my_move_group.go_to_pose_cartesian(wpose)
+  # referencesClient()
   #rotation to inspection panel
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[0]-=grad_to_rad(95)
+  joint_vet[2]+=grad_to_rad(15)#0
+  joint_vet[3]+=grad_to_rad(15)#0
   my_move_group.go_to_joint_state(joint_vet)
   referencesClient()
   #descending to panel storage
   joint_vet=my_move_group.move_group.get_current_joint_values()
-  joint_vet[2]+=grad_to_rad(25)
-  joint_vet[3]+=grad_to_rad(25)
+  joint_vet[2]+=grad_to_rad(10)#25
+  joint_vet[3]+=grad_to_rad(10)#25
   my_move_group.go_to_joint_state(joint_vet)
   referencesClient()
+
   #TODO: REPEAT WITH INCREASED MOTION IF NOT EVERYTHING HAS BEEN FOUND
+  if not EVERYTHING_FOUND:
+    markersInspection(precision_parameter=1)
 
 
 def gripperCommandClient(gripper_state):

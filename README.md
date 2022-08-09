@@ -5,10 +5,10 @@ planning and control for robotic arm
 TODO:
 
 ENV EXPLORATION:
-- stop in specific positions and aquire markers only when not moving
-    with a request client to referencer
+- currently: controller stops the robot and grants permission for referencing, but sometimes this does not work, even if all markers are found. Should give the ability to stop the robot to the detector or
+change inquirer_aruco into this controller?
 
-- set ground truth aruco reference positions to compute the error w/ the current implementation
+- {SIMULATION} set ground truth aruco reference positions to compute the error w/ the current implementation: AS FOR NOW, ESTIMATED MANUALLY
 
 GRIPPER CONTROL
 - since gripper control point TCP not defined, gripper_controller should broadcast

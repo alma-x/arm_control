@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import sys
-from math import pi
+from math import pi as PI
 import numpy as np
 from geometry_msgs.msg import Quaternion,Point,Pose,PoseStamped
 from std_msgs.msg import String,Header
@@ -11,6 +11,7 @@ import moveit_msgs.msg
 # from moveit_msgs.msg import CollisionObject
 import rospy
 import tf2_ros
+from tf.transformations import quaternion_about_axis
 from moveit_commander.conversions import pose_to_list
 from arm_control.srv import collision_object_srv, collision_object_srvRequest,\
                              collision_object_srvResponse
@@ -70,6 +71,12 @@ def all_close(goal, actual, tolerance):
 
 MAX_MID_PANEL_ARUCO_ID=4
 # MAX_MID_PANEL_ARUCO_ID=9
+
+
+def grad_to_rad(angle):
+    return angle*PI/180
+
+
 # class Box:
 #   def __init__(self):
 #     self.name=""
@@ -331,11 +338,20 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
-    box_pose.pose.orientation.w=1
-    self.scene.add_box("imu_hb", box_pose, 
-                        size=(self.CLEARANCE_SAFETY_COEF*.0005,
-                              self.CLEARANCE_SAFETY_COEF*.25,
-                              self.CLEARANCE_SAFETY_COEF*.18))
+    # new_orientation=quaternion_about_axis(grad_to_rad(-18),(0,0,1))
+    # box_pose.pose.orientation.x=new_orientation[0]
+    # box_pose.pose.orientation.y=new_orientation[1]
+    # box_pose.pose.orientation.z=new_orientation[2]
+    # box_pose.pose.orientation.w=new_orientation[3]
+
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
+    self.scene.add_box("right_panel_hb", box_pose, 
+                        size=(self.CLEARANCE_SAFETY_COEF*.25,
+                              self.CLEARANCE_SAFETY_COEF*.18,
+                              self.CLEARANCE_SAFETY_COEF*.0005))
     self.RIGHT_PANEL_CREATED=True
 
 
@@ -358,10 +374,18 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
-    box_pose.pose.orientation.w=1
-    self.scene.add_box("imu_hb", box_pose, 
-                        size=(self.CLEARANCE_SAFETY_COEF*.0996,
-                              self.CLEARANCE_SAFETY_COEF*.1496,
+    # new_orientation=quaternion_about_axis(grad_to_rad(-18),(0,0,1))
+    # box_pose.pose.orientation.x=new_orientation[0]
+    # box_pose.pose.orientation.y=new_orientation[1]
+    # box_pose.pose.orientation.z=new_orientation[2]
+    # box_pose.pose.orientation.w=new_orientation[3]
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
+    self.scene.add_box("lid_hb", box_pose, 
+                        size=(self.CLEARANCE_SAFETY_COEF*.1496,
+                              self.CLEARANCE_SAFETY_COEF*.0996,
                               self.CLEARANCE_SAFETY_COEF*.004))
     self.LID_CREATED=True
 
@@ -385,8 +409,16 @@ class CollisionInterface:
     box_pose.pose.position.x=reference_tf.transform.translation.x
     box_pose.pose.position.y=reference_tf.transform.translation.y
     box_pose.pose.position.z=reference_tf.transform.translation.z
-    box_pose.pose.orientation.w=1
-    self.scene.add_box("imu_hb", box_pose, 
+    # new_orientation=quaternion_about_axis(grad_to_rad(-18),(0,0,1))
+    # box_pose.pose.orientation.x=new_orientation[0]
+    # box_pose.pose.orientation.y=new_orientation[1]
+    # box_pose.pose.orientation.z=new_orientation[2]
+    # box_pose.pose.orientation.w=new_orientation[3]
+    box_pose.pose.orientation.x=reference_tf.transform.rotation.x
+    box_pose.pose.orientation.y=reference_tf.transform.rotation.y
+    box_pose.pose.orientation.z=reference_tf.transform.rotation.z
+    box_pose.pose.orientation.w=reference_tf.transform.rotation.w
+    self.scene.add_box("lid_handle_hb", box_pose, 
                         size=(self.CLEARANCE_SAFETY_COEF*.035,
                               self.CLEARANCE_SAFETY_COEF*.035,
                               self.CLEARANCE_SAFETY_COEF*.035))
@@ -394,7 +426,8 @@ class CollisionInterface:
 
 
   def createInspectionPanelBox(self,reference_tf):
-    print('creating box for: '+'inspection_box') 
+    print('creating box for: '+'inspection_box')
+    new_orientation=quaternion_about_axis(grad_to_rad(-18),(0,0,1))
     self.scene.add_box(name="inspection_box_hb",
                         pose=PoseStamped(
                           header=reference_tf.header,
@@ -403,10 +436,19 @@ class CollisionInterface:
                               x=reference_tf.transform.translation.x,
                               y=reference_tf.transform.translation.y,
                               z=reference_tf.transform.translation.z),
-                            orientation=Quaternion(x=0, y=0, z=0, w=1))),
-                        size=(self.CLEARANCE_SAFETY_COEF*.1,
-                              self.CLEARANCE_SAFETY_COEF*.15,
-                              self.CLEARANCE_SAFETY_COEF*.05))
+                            # orientation=Quaternion(x=new_orientation[0], 
+                            #                       y=new_orientation[1], 
+                            #                       z=new_orientation[2], 
+                            #                       w=new_orientation[3])
+                            orientation=Quaternion(
+                                          x=reference_tf.transform.rotation.x, 
+                                          y=reference_tf.transform.rotation.y, 
+                                          z=reference_tf.transform.rotation.z, 
+                                          w=reference_tf.transform.rotation.w)
+                        )),
+                        size=(self.CLEARANCE_SAFETY_COEF*.15,
+                              self.CLEARANCE_SAFETY_COEF*.05,
+                              self.CLEARANCE_SAFETY_COEF*.1))
     self.INSPECTION_PANEL_CREATED=True
 
 
