@@ -610,6 +610,101 @@ if __name__ == '__main__':
 
 
 """
+CURRENT TASK
+set to zero once task is served; ask for confirmation if task is successfull
+
+ADDITIONAL INPUT PARAMS
+could delete once task is served
+
+MOTION ROUTINES
+could be coded somewhere and performed in order by a counter
+incremento contatore se determinati sistemi di riferimento non sono creati prima della 
+  conclusione della routine corrent
+
+basic routine going in a certain position (eg: facing mid panel) and input param (ie: id)
+  to perform a specific motion toward that specific, unfound, marker
+
+PREDEFINED POSITINOS:
+-ABSOLUTE: HOME, MID_PANEL, LEFT_PANEL,...
+-RELATIVE: pre-approach position to perform some task
+            +usefull working point/TPC for each task
+
+GRIPPER_HB
+-foreach gripper position change both "useful point" (TPC) and hitbox
+bool update_gripper_collision_box(string new_position){
+  /*Diversamente dalle altre funzioni, qui verrà fatto tutto rispetto al tool. Questo per mantenere solidale la box*/
+  Affine3d T_tool_to_center_of_box;
+
+  PoseStamped box_pose;
+  float box_size[3];
+  string box_name="gripper_box";
+  box_pose.header.frame_id="ee_link";
+  box_size[1]=0.03;
+  if(new_position=="open"){
+
+    T_tool_to_center_of_box.translation().x()=(0.096+0.025/2)/2;
+    T_tool_to_center_of_box.translation().y()=0.002;
+    T_tool_to_center_of_box.translation().z()=0;
+    T_tool_to_center_of_box.linear()=from_rpy_to_rotational_matrix(0,0,0);//non mi interessa cambiare la rotazione
+
+    box_size[0]=0.12;
+    box_size[2]=0.13;
+
+  }
+  if(new_position=="semi_open"){
+
+    T_tool_to_center_of_box.translation().x()=(0.128+0.025/2)/2;
+    T_tool_to_center_of_box.translation().y()=0.002;
+    T_tool_to_center_of_box.translation().z()=0;
+    T_tool_to_center_of_box.linear()=from_rpy_to_rotational_matrix(0,0,0);//non mi interessa cambiare la rotazione
+
+
+
+    box_size[0]=(0.128+0.025/2)*1.1;
+    box_size[2]=0.1;
+
+  }
+  if(new_position=="semi_close"){
+
+    T_tool_to_center_of_box.translation().x()=(0.132+0.025/2)/2;
+    T_tool_to_center_of_box.translation().y()=0.002;
+    T_tool_to_center_of_box.translation().z()=0;
+    T_tool_to_center_of_box.linear()=from_rpy_to_rotational_matrix(0,0,0);//non mi interessa cambiare la rotazione
+
+
+
+
+    box_size[0]=(0.132+0.025/2)*1.1;
+    box_size[2]=0.09;
+
+  }
+  if(new_position=="close"){
+
+    T_tool_to_center_of_box.translation().x()=(0.135+0.025/2)/2;
+    T_tool_to_center_of_box.translation().y()=0.002;
+    T_tool_to_center_of_box.translation().z()=0;
+    T_tool_to_center_of_box.linear()=from_rpy_to_rotational_matrix(0,0,0);//non mi interessa cambiare la rotazione
+
+
+
+    box_size[0]=(0.135+0.025/2)*1.1;
+    box_size[2]=0.07;
+
+  }
+
+  Pose pose_center_of_box=homo_to_pose(T_tool_to_center_of_box);
+  box_pose.pose=pose_center_of_box;
+
+  collision_boxes[box_name].name=box_name;
+  collision_boxes[box_name].pose=box_pose;
+  collision_boxes[box_name].size[0]=box_size[0];
+  collision_boxes[box_name].size[1]=box_size[1];
+  collision_boxes[box_name].size[2]=box_size[2];
+  remove_and_detach_box(collision_boxes["gripper_box"]);
+  add_and_attach_box(collision_boxes["gripper_box"]);
+}
+
+
 MOVEIT
 
 https://ros-planning.github.io/moveit_tutorials/doc/move_group_python_interface/move_group_python_interface_tutorial.html
@@ -617,11 +712,96 @@ https://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/move_group_python_
 
 https://ros-planning.github.io/moveit_tutorials/
 
+CONVERSION FUNCITONS
+
+void tf2quat_to_pose(tf2::Quaternion q,Pose *p)
+{
+  p->orientation.x=q.getX();
+  p->orientation.y=q.getY();
+  p->orientation.z=q.getZ();
+  p->orientation.w=q.getW();
+}
+
+Pose homo_to_pose(Affine3d homo){
+
+  tf::Pose pose_tf;
+  Pose pose;
+  tf::poseEigenToTF(homo,pose_tf);
+  tf::poseTFToMsg(pose_tf,pose);
+  return pose;
+
+}
+
+RPY POSE
+
+void SetPoseOrientationRPY(Pose *p,int x0,int y0,int z0)
+{
+  tf2::Quaternion quat;
+  quat.setRPY(grad_to_rad(x0),grad_to_rad(y0),grad_to_rad(z0));
+  p->orientation.x=quat.getX();
+  p->orientation.y=quat.getY();
+  p->orientation.z=quat.getZ();
+  p->orientation.w=quat.getW();
+}
+
+
+PLANNING
+
+robot->setPlannerId("RRTConnectkConfigDefault");
+robot->setPlanningTime(5);
+robot->setNumPlanningAttempts(1000);
+
+#NOTE: planning: success? -> move
+
+
+LOAD STANDARD POSITIONS FROM FILE
+
+string pkgpath = ros::package::getPath("arm_control");
+string path_txt="/config/standard_positions.txt";
+string path_total=pkgpath + path_txt;
+THEN CYCLICALLY LOAD FROM FILE
+
+
+CANCEL TRAJECTORY
+  
+  #PREFERRED
+  MoveGroupInterface move_group(PLANNING_GROUP);
+  robot=&move_group;
+  robot->stop
+  #ELSE 
+  pub_traj_cancel = n.advertise<actionlib_msgs::GoalID>("/arm_controller/follow_joint_trajectory/cancel", 100);
+                                                        "/move_group/cancel"
+  actionlib_msgs::GoalID msg_traj_cancel;
+  msg_traj_cancel.id="";
+  pub_traj_cancel.publish(msg_traj_cancel);
+
+
+############
+  gazebo_model_state_pub = node_handle.advertise<gazebo_msgs::ModelState>("/gazebo/set_model_state", 100);
+  pose_object_client = node_handle.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
 
 
 PICK N PLACE
-
+#NOTE: should consider future TCP when deciding pose for picking an object (or any other option)
+# eg:   gripper's tip when pughing bottons, specific TCP for each specific aperture for each action
+#NOTE: remember to add picked object hitbox to gripper
 gazebo_msgs.msg import ModelState
+
+void pick(string name_object,double distance_from_ee){
+  Pose pose;
+  pose.position.x = 0.0;
+  pose.position.y = distance_from_ee+0.0819;
+  pose.position.z = 0.0;
+  pose.orientation.w = 1;
+
+  gazebo_msgs::ModelState model_state;
+  model_state.model_name = name_object;
+  model_state.pose = pose;
+  model_state.reference_frame =std::string("wrist_3_link");
+
+  picked=true;
+  while(picked==true){
+  gazebo_model_state_pub.publish(model_state);
 
 PUBLISER_TOPIC="/gazebo/set_model_state",
 
