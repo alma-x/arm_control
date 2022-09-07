@@ -13,8 +13,9 @@
                 type="fake_controller.py" 
                 respawn="true" 
                 output="screen"
-                launch-prefix="xterm -e"
         ></node>
+                        <!-- launch-prefix="xterm -e" -->
+
     
 <!-- NODE2: dummy gripper controller -->
         <node 

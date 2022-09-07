@@ -3,27 +3,21 @@
 import rospy
 import numpy as np
 import os
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, TransformStamped
 import tf2_ros
 from tf.transformations import quaternion_inverse
-from geometry_msgs.msg import TransformStamped
-from arm_vision.msg import FoundArucos
 from arm_control.srv import GripperCommand
 from arm_vision.srv import FoundMarker,ReferenceAcquisition
 import moveit_commander
-import moveit_msgs.msg  
-import geometry_msgs.msg
+from moveit_msgs.msg  import Grasp,DisplayTrajectory
 from math import pi as PI
 from std_msgs.msg import String,Empty
 from moveit_commander.conversions import pose_to_list
 
 
 from moveit_commander import *
-from moveit_commander.conversions import pose_to_list
 from moveit_commander.move_group import MoveGroupCommander
 from moveit_commander.robot import RobotCommander
-import moveit_msgs.msg
-import geometry_msgs.msg
 import moveit_commander
 import copy
 
@@ -42,9 +36,12 @@ class MyMoveGroup(object):
     ## interface to a planning group (group of joints)
     group_name = "manipulator"
     move_group =MoveGroupCommander(group_name)
+    group_name = "gripper"
+    ee_move_group =MoveGroupCommander(group_name)
+
     ## display trajectories in Rviz:
     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                   moveit_msgs.msg.DisplayTrajectory,
+                                                   DisplayTrajectory,
                                                    queue_size=20)
 
     
@@ -67,6 +64,7 @@ class MyMoveGroup(object):
     self.robot = robot
     self.scene = scene
     self.move_group = move_group
+    self.ee_move_group=ee_move_group
     self.display_trajectory_publisher = display_trajectory_publisher
     self.planning_frame = planning_frame
     self.eef_link = eef_link
@@ -86,10 +84,10 @@ class MyMoveGroup(object):
         if abs(actual[index] - goal[index]) > tolerance:
           return False
 
-    elif type(goal) is geometry_msgs.msg.PoseStamped:
+    elif type(goal) is PoseStamped:
       return self.all_close(goal.pose, actual.pose, tolerance)
 
-    elif type(goal) is geometry_msgs.msg.Pose:
+    elif type(goal) is Pose:
       return self.all_close(pose_to_list(goal), pose_to_list(actual), tolerance)
 
     return True
@@ -176,11 +174,11 @@ class MyMoveGroup(object):
     robot = self.robot
     display_trajectory_publisher = self.display_trajectory_publisher
 
-    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory = DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(plan)
 
-    display_trajectory_publisher.publish(display_trajectory);
+    display_trajectory_publisher.publish(display_trajectory)
 
   def execute_plan(self, plan):
     move_group = self.move_group
@@ -289,6 +287,8 @@ class MyMoveGroup(object):
     return self.wait_for_state_update(box_is_attached=False, box_is_known=False, timeout=timeout)
   
   def get_joints_values(self):
+    #BUG
+    # joints_grad=self.move_group.get_current_joint_values()
     joints_grad=move_group.get_current_joint_values()
     return joints_grad
 
@@ -299,27 +299,60 @@ class MyMoveGroup(object):
 
 my_move_group=MyMoveGroup()
 
-
 exit_request=False
 
 INQUIRIES_SERVICE='aruco_inquiries'
 GRIPPER_SERVICE='gripper_commands'
 REFERENCES_SERVICE='references'
+#TODO add auto base_link name retrival
+BASE_FRAME='base_link'
 
-#TODO: use this to check if exploration was 100% successfull
+#TODO: use this to check if exploration was 100s% successfull
 #  must use referencing/objects because aruco always successfully found...
 #   maybe it will be better to give the referencing providing ability to aruco_detector?
 #   since sometimes the current method does not work
 EVERYTHING_FOUND=True
 
+MAX_MID_PANEL_ARUCO_ID=4
+REAL_MAX_MID_PANEL_ARUCO_ID=9
+#TODO instead of having 2 sources for  required ids, use a service to ask
+#referencer node which are the required ones
+objects_markers={'table_':            [10,14],
+                 'mid_panel':[marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                 'button_1': [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_2':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_3':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_4': [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_5': [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_6':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_7':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_8':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'button_9':  [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
+                'imu_':               [10],
+                'left_panel':          [11],
+                'right_panel':        [12,13],
+                'inspection_panel':   [12,13],
+                'lid_':               [13],
+                'lid_storage':         [14]}
+
 HOME_POSITION=[0,-120,100,20,90,-90]
 requested_objective=rospy.set_param("/objective",0)
 secret_id=0
+tf_buffer=None
+tf_listener=None
 
 
 def grad_to_rad(angle):
     return angle*PI/180
 
+
+def queryReferenceFramePose(object_name):
+  while True:
+    try:
+      return tf_buffer.lookup_transform(BASE_FRAME,object_name,rospy.Time())
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, \
+        tf2_ros.ExtrapolationException): pass
+  
 
 #TODO: change it with existing reference and objects
 def arucoInquiriesClient(id):
@@ -327,10 +360,10 @@ def arucoInquiriesClient(id):
     try:
         inquirer=rospy.ServiceProxy(INQUIRIES_SERVICE,FoundMarker)
         inquiry_result=inquirer(id)
-        if not inquiry_result.found:
-          print('not found yet')
-        else:
-          print('found')
+        # if not inquiry_result.found:
+        #   print('not found yet')
+        # else:
+        #   print('found')
         return inquiry_result
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
@@ -353,7 +386,7 @@ def referencesClient(permission_timeout=3):
 def markersInspection(precision_parameter=0):
   print('workspace exploration')
   group_name="manipulator"
-  group=moveit_commander.MoveGroupCommander(group_name)
+  group=MoveGroupCommander(group_name)
   #motion backwards
   wpose = group.get_current_pose().pose
   wpose.position.x -= 0.2
@@ -399,7 +432,6 @@ def markersInspection(precision_parameter=0):
 
 def gripperCommandClient(gripper_state):
   print("requested gripper state: ",gripper_state)
-  rospy.wait_for_service(GRIPPER_SERVICE)
   try:
     commander=rospy.ServiceProxy(GRIPPER_SERVICE,GripperCommand)
     while True:
@@ -410,78 +442,113 @@ def gripperCommandClient(gripper_state):
 
 def actuationOfButtons():
     buttons_ids=rospy.get_param('/buttons_sequence')
+    if all([arucoInquiriesClient(required).found for required in objects_markers['button_1']]):
 
-    #TODO: since apparently presence of class(es) breaks ability to pub/sub
-    #imma send a service request to a relay node, w/out classes
+    #TODO possibly remove proxy gripper node 
     # print('closing gripper')
     # gripper_pub=rospy.Publisher('/gripper_command',String,queue_size=5)
     # gripper_command=String()
     # gripper_command.data="close"
     # gripper_pub.publish(gripper_command)
-    gripperCommandClient("close")    
 
-    homePositioning()
+      homePositioning()
+      gripperCommandClient("close")    
 
-    print('pressing buttons sequence: {}'.format(buttons_ids))
-    # for button_id in buttons_ids.split():
-    #     pressButton(button_id)
-    [pressButton(button_id) for partial in buttons_ids.split()
-     for button_id in partial.split(',') 
-     if not (button_id=='' or button_id==',')]
-
+      print('pressing buttons sequence: {}'.format(buttons_ids))
+      [pressButton(button_id) for partial in buttons_ids.split()
+                            for button_id in partial.split(',') 
+                        if not (button_id=='' or button_id==',')]
 
 
 def pressButton(button_id):
-    print('pressing button: {}'.format(button_id))
-    # answer=arucoInquiriesClient(int(button_id))
-    # if answer.found:
+    """print('pressing button: {}'.format(button_id))
+    answer=arucoInquiriesClient(int(button_id))
+    if answer.found:
 
-    #   SAFETY_X=0.05
-    #   SAFETY_Y=0
-    #   SAFETY_Z=0
+      SAFETY_X=0.05
+      SAFETY_Y=0
+      SAFETY_Z=0
 
-    #   MARKER_BUTTON_Z_DIST=0.03+0.05/2
+      MARKER_BUTTON_Z_DIST=0.03+0.05/2
 
 
-    #   current_pose = group.get_current_pose().pose
-    #   button_pose=answer.pose
-    #   target_pose=current_pose
+      current_pose = group.get_current_pose().pose
+      button_pose=answer.pose
+      target_pose=current_pose
 
-    #   # delta_x=button_pose.position.x-current_pose.position.x
-    #   # # >0 move forward +, <0 move backward -
-    #   # delta_y=button_pose.position.y-current_pose.position.y
-    #   # # >0 move right -, <0 move left +
-    #   # delta_z=button_pose.position.z-current_pose.position.z
-    #   # #>0 move up +, <0 move down -
-    #   # target_pose.position.x+=delta_x-SAFETY_X
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
-    #   # target_pose.position.y-=delta_y+SAFETY_Y
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
-    #   # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
+      # delta_x=button_pose.position.x-current_pose.position.x
+      # # >0 move forward +, <0 move backward -
+      # delta_y=button_pose.position.y-current_pose.position.y
+      # # >0 move right -, <0 move left +
+      # delta_z=button_pose.position.z-current_pose.position.z
+      # #>0 move up +, <0 move down -
+      # target_pose.position.x+=delta_x-SAFETY_X
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)
+      # target_pose.position.y-=delta_y+SAFETY_Y
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)
+      # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)
       
-    #   delta_x=0.19
-    #   delta_y=-0.05
-    #   delta_z=0.05
+      delta_x=0.19
+      delta_y=-0.05
+      delta_z=0.05
 
-    #   # target_pose.position.x+=delta_x-SAFETY_X
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
-    #   # target_pose.position.y-=delta_y+SAFETY_Y
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
-    #   # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
-    #   # target_pose.orientation=current_pose.orientation
-    #   # my_move_group.go_to_pose_cartesian(button_pose)
-
-
+      # target_pose.position.x+=delta_x-SAFETY_X
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)
+      # target_pose.position.y-=delta_y+SAFETY_Y
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)
+      # target_pose.position.z+=delta_z+SAFETY_Z+MARKER_BUTTON_Z_DIST
+      # target_pose.orientation=current_pose.orientation
+      # my_move_group.go_to_pose_cartesian(button_pose)"""
 
 
+#https://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/pick_place/pick_place_tutorial.html
 def sensorPickup():
+  if all([arucoInquiriesClient(required).found for required in objects_markers['imu_']]):
     print('picking up IMU module')
+    # imu_tf=queryReferenceFramePose('imu_')
+    grasp=Grasp()
+    grasp.id='imu_grasp'
+
+    # grasp.grasp_pose.pose.position= imu_tf.transform.translation
+    # grasp.grasp_pose.pose.orientation= imu_tf.transform.rotation
+    grasp.grasp_pose.pose.position.x= -.19
+    grasp.grasp_pose.pose.position.y= .115
+    grasp.grasp_pose.pose.position.z= .26
+    grasp.grasp_pose.pose.orientation.x= -.707
+    grasp.grasp_pose.pose.orientation.y= .0
+    grasp.grasp_pose.pose.orientation.z= .0
+    grasp.grasp_pose.pose.orientation.w= .707
+    # grasp.grasp_posture.
+
+    grasp.pre_grasp_approach.direction.header.frame_id='imu_'
+    grasp.pre_grasp_approach.direction.vector.x = .0
+    grasp.pre_grasp_approach.direction.vector.y = 1
+    grasp.pre_grasp_approach.direction.vector.z = .0
+    grasp.pre_grasp_approach.min_distance = 0.1
+    grasp.pre_grasp_approach.desired_distance = 0.2 
+    # grasp.pre_grasp_posture.header.frame_id = "right_gripper_base_link"
+    # grasp.pre_grasp_posture.joint_names = ["right_gripper_finger_joint"]
+   
+    grasp.post_grasp_retreat.direction.header.frame_id='imu_'
+    grasp.post_grasp_retreat.direction.vector.x=0
+    grasp.post_grasp_retreat.direction.vector.x = .0
+    grasp.post_grasp_retreat.direction.vector.y = 1
+    grasp.post_grasp_retreat.direction.vector.z = .0
+    grasp.post_grasp_retreat.min_distance = 0.1
+    grasp.post_grasp_retreat.desired_distance = 0.2 
+
+    grasp.allowed_touch_objects.append('table_hb')
+
+    my_move_group.move_group.pick("imu_hb", [grasp])
+
+
+    # print(grasp)
 
 
 def sensorPositioning():
@@ -538,19 +605,25 @@ def fakeController():
             group, \
             planning_frame ,\
             robot,\
-            scene
+            scene,\
+            tf_buffer,tf_listener
     current_objective=0
 
-    robot= moveit_commander.RobotCommander()
-    scene=moveit_commander.PlanningSceneInterface()
+    robot= RobotCommander()
+    scene=PlanningSceneInterface()
     group_name="manipulator"
-    group=moveit_commander.MoveGroupCommander(group_name)
+    group=MoveGroupCommander(group_name)
     planning_frame = group.get_planning_frame()
     eef_link = group.get_end_effector_link()
     # group_names = robot.get_group_names()
     # robot.get_current_state()
     # print(robot.get_current_state())
 
+    tf_buffer=tf2_ros.Buffer(cache_time=rospy.Duration(1))
+    tf_listener=tf2_ros.TransformListener(tf_buffer,queue_size=None)
+    
+    #gripper command service
+    rospy.wait_for_service(GRIPPER_SERVICE)
 
     while not rospy.core.is_shutdown() and not exit_request:
         

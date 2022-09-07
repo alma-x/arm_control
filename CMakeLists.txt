@@ -61,11 +61,11 @@ include_directories(
 
 
 
-add_executable(ERC src/ERC.cpp)
+# add_executable(ERC src/ERC.cpp)
 
-add_dependencies(ERC ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+# add_dependencies(ERC ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
-target_link_libraries(ERC ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+# target_link_libraries(ERC ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
  catkin_install_python(
   PROGRAMS
