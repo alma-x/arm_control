@@ -10,7 +10,7 @@ from arm_control.srv import GripperCommand
 from arm_vision.srv import FoundMarker,ReferenceAcquisition
 import moveit_commander
 from moveit_msgs.msg  import Grasp,DisplayTrajectory
-from math import pi as PI
+from math import pi as PI,sqrt
 from std_msgs.msg import String,Empty
 from moveit_commander.conversions import pose_to_list
 
@@ -313,10 +313,12 @@ BASE_FRAME='base_link'
 #   since sometimes the current method does not work
 EVERYTHING_FOUND=True
 
-MAX_MID_PANEL_ARUCO_ID=4
+#TODO may otherwise use a parameter or some service
 REAL_MAX_MID_PANEL_ARUCO_ID=9
+# MAX_MID_PANEL_ARUCO_ID=4
+MAX_MID_PANEL_ARUCO_ID=REAL_MAX_MID_PANEL_ARUCO_ID
 #TODO instead of having 2 sources for  required ids, use a service to ask
-#referencer node which are the required ones
+#referencer node if all required markers have been found
 objects_markers={'table_':            [10,14],
                  'mid_panel':[marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
                  'button_1': [marker for marker in range (1,MAX_MID_PANEL_ARUCO_ID+1)],
@@ -389,10 +391,19 @@ def markersInspection(precision_parameter=0):
   group=MoveGroupCommander(group_name)
   #motion backwards
   wpose = group.get_current_pose().pose
-  wpose.position.x -= 0.2
+  wpose.position.x -= 0.3
   my_move_group.go_to_pose_cartesian(wpose)
+  joint_vet=my_move_group.move_group.get_current_joint_values()
+  joint_vet[0]-=grad_to_rad(10)
+  my_move_group.go_to_joint_state(joint_vet)
   referencesClient()
   #rotation to imu
+  joint_vet=my_move_group.move_group.get_current_joint_values()
+  joint_vet[0]+=grad_to_rad(10)
+  my_move_group.go_to_joint_state(joint_vet)
+  wpose = group.get_current_pose().pose
+  wpose.position.x += 0.1
+  my_move_group.go_to_pose_cartesian(wpose)
   joint_vet=my_move_group.move_group.get_current_joint_values()
   joint_vet[0]+=grad_to_rad(40)
   joint_vet[1]+=grad_to_rad(20)
@@ -461,6 +472,55 @@ def actuationOfButtons():
 
 
 def pressButton(button_id):
+    print('pressing button: {}'.format(button_id))
+    answer=arucoInquiriesClient(int(button_id))
+    if answer.found:
+
+      SAFETY_X=-0.05
+      SAFETY_Y=0
+      SAFETY_Z=-0.020
+
+      MARKER_BUTTON_Z_DIST=0.03+0.05/2
+      MARKER_BUTTON_Z_DIST_1MOVE = 0.023 +0.250
+
+
+      current_pose = group.get_current_pose().pose
+      button_pose=answer.pose
+      
+      # Initialization of the target pose
+      target_pose = current_pose
+      
+      # Delta values
+      delta_x = button_pose.position.x -current_pose.position.x # >0 move forward +, <0 move backward -
+      delta_y = button_pose.position.y -current_pose.position.y # >0 move right -, <0 move left +
+      delta_z = button_pose.position.z -current_pose.position.z # >0 move up +, <0 move down -
+      
+      # 1st move
+      target_pose.orientation = current_pose.orientation
+      target_pose.position.x += delta_x +SAFETY_X
+      target_pose.position.y += delta_y +SAFETY_Y
+      target_pose.position.z += delta_z +SAFETY_Z -MARKER_BUTTON_Z_DIST_1MOVE
+      
+      my_move_group.go_to_pose_cartesian(target_pose)
+      
+      # 2nd section
+      current_pose = group.get_current_pose().pose
+      
+      # 2nd initialization of the target pose
+      target_pose = current_pose
+      
+      # Delta values
+      delta_x = button_pose.position.x -current_pose.position.x # >0 move forward +, <0 move backward -
+      delta_y = button_pose.position.y -current_pose.position.y # >0 move right -, <0 move left +
+      delta_z = button_pose.position.z -current_pose.position.z # >0 move up +, <0 move down -
+      
+      # 2nd move
+      target_pose.orientation = current_pose.orientation
+      target_pose.position.x += delta_x +SAFETY_X
+      target_pose.position.y += delta_y +SAFETY_Y
+      target_pose.position.z += delta_z +SAFETY_Z
+      
+      my_move_group.go_to_pose_cartesian(target_pose)
     """print('pressing button: {}'.format(button_id))
     answer=arucoInquiriesClient(int(button_id))
     if answer.found:
@@ -515,6 +575,11 @@ def sensorPickup():
     grasp=Grasp()
     grasp.id='imu_grasp'
 
+    
+    # trajectory_msgs/JointTrajectory 
+    # grasp.pre_grasp_posture.header.frame_id
+    # grasp.pre_grasp_posture.pose
+
     # grasp.grasp_pose.pose.position= imu_tf.transform.translation
     # grasp.grasp_pose.pose.orientation= imu_tf.transform.rotation
     grasp.grasp_pose.pose.position.x= -.19
@@ -523,7 +588,7 @@ def sensorPickup():
     grasp.grasp_pose.pose.orientation.x= -.707
     grasp.grasp_pose.pose.orientation.y= .0
     grasp.grasp_pose.pose.orientation.z= .0
-    grasp.grasp_pose.pose.orientation.w= .707
+    grasp.grasp_pose.pose.orientation.w= sqrt(1 -grasp.grasp_pose.pose.orientation.x**2)
     # grasp.grasp_posture.
 
     grasp.pre_grasp_approach.direction.header.frame_id='imu_'
@@ -587,19 +652,30 @@ def homePositioning():
     my_move_group.go_to_joint_state(joint_vet)
 
 
-#TODO: innested dictionary for function and PARAM name
+def doNothing():pass
+
+
 objectives_to_actions={ '1':markersInspection,
-                        '2':actuationOfButtons,
-                        '3':sensorPickup,
-                        '4':sensorPositioning,
-                        '5':panelOpening,
-                        '6':panelConverStorage,
-                        '7':panelInspection,
-                        '8':panelClosing,
-                        '9':secretButton,
+                        '2':doNothing,
+                        '3':doNothing,
+                        '4':doNothing,
+                        '5':doNothing,
+                        '6':doNothing,
+                        '7':doNothing,
+                        '8':doNothing,
+                        '9':doNothing,
+                        # '2':actuationOfButtons,
+                        # '3':sensorPickup,
+                        # '4':sensorPositioning,
+                        # '5':panelOpening,
+                        # '6':panelConverStorage,
+                        # '7':panelInspection,
+                        # '8':panelClosing,
+                        # '9':secretButton,
                         '10':homePositioning                      
                     }
 
+#--------------------------------------------------------------#
 def fakeController():
     global request_served, \
             group, \
@@ -634,27 +710,28 @@ def fakeController():
         
         if current_objective!=requested_objective:
           current_objective=requested_objective
-          # objectives_to_actions[requested_objective]
-          if current_objective==1:
-              markersInspection()
-          elif current_objective==2:
-              actuationOfButtons()
-          elif current_objective==3:
-              sensorPickup()
-          elif current_objective==4:
-              sensorPositioning()
-          elif current_objective==5:
-              panelOpening()
-          elif current_objective==6:
-              panelConverStorage()
-          elif current_objective==7:
-              panelInspection()
-          elif current_objective==8:
-              panelClosing()
-          elif current_objective==9:
-              secretButton()
-          elif current_objective==10:
-              homePositioning()
+          if current_objective in range(1,11):
+            objectives_to_actions[str(current_objective)]()
+          # if current_objective==1:
+          #     markersInspection()
+          # elif current_objective==2:
+          #     actuationOfButtons()
+          # elif current_objective==3:
+          #     sensorPickup()
+          # elif current_objective==4:
+          #     sensorPositioning()
+          # elif current_objective==5:
+          #     panelOpening()
+          # elif current_objective==6:
+          #     panelConverStorage()
+          # elif current_objective==7:
+          #     panelInspection()
+          # elif current_objective==8:
+          #     panelClosing()
+          # elif current_objective==9:
+          #     secretButton()
+          # elif current_objective==10:
+          #     homePositioning()
           else:
               print('objectives are int, [1,10]')
           print('done')
